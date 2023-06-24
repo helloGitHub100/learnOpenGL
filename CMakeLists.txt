@@ -33,3 +33,4 @@ set(RESOURCES_TEXTURES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/resources/textures)
 
 add_subdirectory(Shader)
 add_subdirectory(1_StartedTutorial)
+add_subdirectory(2_Lighting)
