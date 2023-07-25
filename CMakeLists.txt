@@ -10,7 +10,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})#静态库的输出目录
 
 message(STATUS "VCPKG_ROOT= $ENV{VCPKG_ROOT}" )
 add_definitions(-DCMAKE_TOOLCHAIN_FILE=$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake)
-set(GLAD_SOURCE "D:/vscode/learnOpenGL/glad/src/glad.c")
+#set(GLAD_SOURCE "./glad/src/glad.c")
 #set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
 #include(${CMAKE_TOOLCHAIN_FILE})
 #message(STATUS "CMAKE_TOOLCHAIN_FILE= ${CMAKE_TOOLCHAIN_FILE}" )
