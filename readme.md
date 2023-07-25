@@ -29,3 +29,23 @@
 ### vscode扩展
 ![](vscode扩展.png)
 ![vscode扩展2](image.png)
+
+## Ubuntu系统准备工作
+
+### 1.下载、安装vcpkg
+
+打开终端，执行如下命令
+```shell
+git clone https://github.com/Microsoft/vcpkg.git
+cd vcpkg
+./bootstrap-vcpkg.sh
+./bootstrap-vcpkg.sh
+sudo ln -s vcpkg文件的绝对路径 /usr/local/bin
+```
+
+### 2.安装依赖库
+
+#### 安装glfw3
+打开终端，执行命令```sudo vcpkg install glfw3:x64-linux```
+#### 安装glad
+打开终端，执行命令```sudo vcpkg install glad[gl-api-33]:x64-linux```
