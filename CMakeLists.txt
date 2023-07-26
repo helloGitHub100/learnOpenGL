@@ -19,7 +19,7 @@ message(STATUS "glfw3_DIR= ${glfw3_DIR}" )
 find_package(glfw3 CONFIG REQUIRED)
 find_package(glad CONFIG REQUIRED)
 
-link_libraries(opengl32.lib glfw glad::glad)
+link_libraries(glfw glad::glad)
 
 set(Include_Common_Dir ${CMAKE_CURRENT_SOURCE_DIR}/includes/)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Shader/)

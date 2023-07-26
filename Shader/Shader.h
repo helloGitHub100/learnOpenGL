@@ -2,11 +2,15 @@
 #define SHADER_H
 
 #ifndef BUILD_STATIC
+#if defined(_WIN32) || defined(_WIN64)
 # if defined(MY_SHADER_LIB)
 #  define MY_SHADER_EXPORT __declspec(dllexport)
 # else
 #  define MY_SHADER_EXPORT __declspec(dllimport)
 # endif
+#else
+#define MY_SHADER_EXPORT __attribute__((visibility("default")))
+#endif
 #else
 # define MY_SHADER_EXPORT
 #endif
