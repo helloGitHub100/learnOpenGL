@@ -94,7 +94,7 @@ void Shader::setFloat(const std::string &name, vector<float> values) const
 {
     int loction = glGetUniformLocation(ID, name.c_str());
     if (-1 == loction)
-        std::cout << "ERROR::Shader::setFloat: loction = " << loction << std::endl;
+        std::cout << "ERROR::Shader::setFloat: loction = " << loction << ", name: " << name << std::endl;
     
     size_t num = values.size();
     if (1 == num)
