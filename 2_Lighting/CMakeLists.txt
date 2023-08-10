@@ -4,3 +4,4 @@ add_custom_target(2_Lighting)
 
 add_subdirectory(2_1Colors)
 add_subdirectory(2_2BasicLighting)
+add_subdirectory(2_2BasicLighting_ex1)
