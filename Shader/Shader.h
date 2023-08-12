@@ -47,6 +47,7 @@ public:
     void setBool(const std::string &name, bool value) const;  
     void setInt(const std::string &name, int value) const;   
     void setFloat(const std::string &name, vector<float> values) const;
+    void setVec3(const std::string &name, glm::vec3 v);
     void setMatrixFloat(const std::string &name, vector<glm::mat4>  transList, int dimension);
 
     void checkCompileErrors(unsigned int shader, std::string type);
