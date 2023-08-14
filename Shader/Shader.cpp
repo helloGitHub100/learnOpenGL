@@ -109,9 +109,19 @@ void Shader::setFloat(const std::string &name, vector<float> values) const
         std::cout << "ERROR::Shader::setFloat: values.size() = " << num << ". It should be in the range [1,4]." << std::endl;
 }
 
+void Shader::setFloat(const std::string &name, float value)
+{
+    setFloat(name, vector<float>{value});
+}
+
 void Shader::setVec3(const std::string &name, glm::vec3 v)
 {
     setFloat(name, vector<float>{v.x, v.y, v.z});
+}
+
+void Shader::setVec3(const std::string &name, float x, float y, float z)
+{
+    setFloat(name, vector<float>{x, y, z});
 }
 
 void Shader::setMatrixFloat(const std::string &name, vector<glm::mat4> transList, int dimension)
