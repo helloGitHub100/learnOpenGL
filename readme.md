@@ -18,6 +18,8 @@
 打开cmd，执行命令```vcpkg install glfw3:x64-windows```
 #### 安装glad
 打开cmd，vcpkg install glad[gl-api-33]:x64-windows
+#### 安装assimp
+vcpkg install assimp:x64-windows
 
 #### 安装vs编译工具包（编译器、生成器、cmake）
 
