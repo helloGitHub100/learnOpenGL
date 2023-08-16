@@ -1,7 +1,6 @@
 #ifndef MODEL_H
 #define MODEL_H
 #include "mesh.h"
-#include "Shader.h"
 #include <stb_image.h>
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -19,7 +18,7 @@ class Model
         {
             loadModel(path);
         }
-        void Draw(Shader shader);   
+        void Draw(unsigned int ID);   
     private:
         
         /*  函数   */

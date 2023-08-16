@@ -3,7 +3,6 @@
 
 #include <glad/glad.h>
 #include <glm/glm.hpp>
-#include "Shader.h"
 #include <string>
 #include <vector>
 #define MAX_BONE_INFLUENCE 4
@@ -43,7 +42,7 @@ class Mesh {
         /*  函数  */
         Mesh(vector<Vertex> vertices, vector<unsigned int> indices, vector<Texture> textures);
         
-        void Draw(Shader shader);
+        void Draw(unsigned int ID);
     private:
         /*  渲染数据  */
         unsigned int VBO, EBO;
