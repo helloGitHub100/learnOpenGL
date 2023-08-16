@@ -1,4 +1,4 @@
-#include <glad/glad.h>
+﻿#include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
 #include <glm/glm.hpp>
@@ -69,7 +69,7 @@ int main()
     }
 
     // tell stb_image.h to flip loaded texture's on the y-axis (before loading model).
-    stbi_set_flip_vertically_on_load(true);
+    //stbi_set_flip_vertically_on_load(true);
 
     // configure global opengl state
     // -----------------------------
@@ -81,7 +81,9 @@ int main()
 
     // load models
     // -----------
-    Model ourModel(RESOURCES_MODEL_DIR"/backpack/backpack.obj");
+    //string test(RESOURCES_MODEL_DIR"/babala/芭芭拉.pmx");
+    //std::cout << "chinese test: " << test.c_str() << " chinese end." << std::endl;
+    Model ourModel(RESOURCES_MODEL_DIR"/babala2/Barbara.obj");
 
     
     // draw in wireframe
