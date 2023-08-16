@@ -81,9 +81,7 @@ int main()
 
     // load models
     // -----------
-    //string test(RESOURCES_MODEL_DIR"/babala/芭芭拉.pmx");
-    //std::cout << "chinese test: " << test.c_str() << " chinese end." << std::endl;
-    Model ourModel(RESOURCES_MODEL_DIR"/babala2/Barbara.obj");
+    Model ourModel(RESOURCES_MODEL_DIR"/barbara/Barbara.obj");
 
     
     // draw in wireframe

@@ -4,3 +4,4 @@ add_custom_target(3_modelLoading)
 
 add_subdirectory(3_3modelLoading)
 add_subdirectory(3_3modelLoading-1)
+add_subdirectory(3_3modelLoading-2)
