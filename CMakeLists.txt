@@ -19,8 +19,9 @@ message(STATUS "glfw3_DIR= ${glfw3_DIR}" )
 find_package(glfw3 CONFIG REQUIRED)
 find_package(glad CONFIG REQUIRED)
 find_package(assimp CONFIG REQUIRED)
+find_package(imgui CONFIG REQUIRED)
 
-link_libraries(glfw glad::glad assimp::assimp)
+link_libraries(glfw glad::glad assimp::assimp imgui::imgui)
 
 set(Include_Common_Dir ${CMAKE_CURRENT_SOURCE_DIR}/includes/)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Shader/)
@@ -35,8 +36,11 @@ set(STD_IMAGE_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/includes/stb_image.h)
 set(RESOURCES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/resources)
 set(RESOURCES_TEXTURES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/resources/textures)
 
+add_compile_definitions(RESOURCES_DIR=\"${RESOURCES_DIR}\")
+
 add_subdirectory(Shader)
 add_subdirectory(includes)
 add_subdirectory(1_StartedTutorial)
 add_subdirectory(2_Lighting)
 add_subdirectory(3_modelLoading)
+add_subdirectory(4_advancedOpengl)
