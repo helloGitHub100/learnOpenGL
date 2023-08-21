@@ -19,6 +19,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow *window);
+unsigned int loadTexture(const char *path);
 
 // settings
 const unsigned int SCR_WIDTH = 1600;
@@ -38,6 +39,51 @@ bool g_bCaptureCursor = true;
 
 int main()
 {
+    float cubeVertices[] = {
+        // positions          // normals           // texture coords
+    -0.5f, -0.5f, -0.5f,  -1.0f,  -1.0f, -1.0f,  0.0f, 0.0f,
+     0.5f, -0.5f, -0.5f,  1.0f,  -1.0f, -1.0f,  1.0f, 0.0f,
+     0.5f,  0.5f, -0.5f,  1.0f,  1.0f, -1.0f,  1.0f, 1.0f,
+     0.5f,  0.5f, -0.5f,  1.0f,  1.0f, -1.0f,  1.0f, 1.0f,
+    -0.5f,  0.5f, -0.5f,  -1.0f,  1.0f, -1.0f,  0.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,  -1.0f,  -1.0f, -1.0f,  0.0f, 0.0f,
+
+    -0.5f, -0.5f,  0.5f,  -1.0f,  -1.0f, 1.0f,   0.0f, 0.0f,
+     0.5f, -0.5f,  0.5f,  1.0f,  -1.0f, 1.0f,   1.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f,  1.0f, 1.0f,   1.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,  1.0f,  1.0f, 1.0f,   1.0f, 1.0f,
+    -0.5f,  0.5f,  0.5f,  -1.0f,  1.0f, 1.0f,   0.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f,  -1.0f,  -1.0f, 1.0f,   0.0f, 0.0f,
+
+    -0.5f,  0.5f,  0.5f, -1.0f,  1.0f, 1.0f,  1.0f, 0.0f,
+    -0.5f,  0.5f, -0.5f, -1.0f,  1.0f, -1.0f,  1.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f, -1.0f,  -1.0f, -1.0f,  0.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f, -1.0f,  -1.0f, -1.0f,  0.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f, -1.0f,  -1.0f, 1.0f,  0.0f, 0.0f,
+    -0.5f,  0.5f,  0.5f, -1.0f,  1.0f, 1.0f,  1.0f, 0.0f,
+
+     0.5f,  0.5f,  0.5f,  1.0f,  1.0f, 1.0f,  1.0f, 0.0f,
+     0.5f,  0.5f, -0.5f,  1.0f,  1.0f, -1.0f,  1.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,  1.0f,  -1.0f, -1.0f,  0.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,  1.0f,  -1.0f, -1.0f,  0.0f, 1.0f,
+     0.5f, -0.5f,  0.5f,  1.0f,  -1.0f, 1.0f,  0.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f,  1.0f, 1.0f,  1.0f, 0.0f,
+
+    -0.5f, -0.5f, -0.5f,  -1.0f,  -1.0f, -1.0f,  0.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,  1.0f,  -1.0f, -1.0f,  1.0f, 1.0f,
+     0.5f, -0.5f,  0.5f,  1.0f,  -1.0f, 1.0f,  1.0f, 0.0f,
+     0.5f, -0.5f,  0.5f,  1.0f,  -1.0f, 1.0f,  1.0f, 0.0f,
+    -0.5f, -0.5f,  0.5f,  -1.0f,  -1.0f, 1.0f,  0.0f, 0.0f,
+    -0.5f, -0.5f, -0.5f,  -1.0f,  -1.0f, -1.0f,  0.0f, 1.0f,
+
+    -0.5f,  0.5f, -0.5f,  -1.0f,  1.0f, -1.0f,  0.0f, 1.0f,
+     0.5f,  0.5f, -0.5f,  1.0f,  1.0f, -1.0f,  1.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,  1.0f,  1.0f, 1.0f,  1.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f,  1.0f, 1.0f,  1.0f, 0.0f,
+    -0.5f,  0.5f,  0.5f,  -1.0f,  1.0f, 1.0f,  0.0f, 0.0f,
+    -0.5f,  0.5f, -0.5f,  -1.0f,  1.0f, -1.0f,  0.0f, 1.0f
+    };
+
     // glfw: initialize and configure
     // ------------------------------
     glfwInit();
@@ -88,11 +134,13 @@ int main()
     // build and compile shaders
     // -------------------------
     Shader ourShader(VERTEX_FILE, FRAGMENT_FILE);
-    Shader ourShaderSingleColor(VERTEX_FILE, FRAGMENT_SINGLE_COLOR_FILE);
+    Shader ourShaderSingleColor(VERTEX_SINGLE_COLOR_FILE, FRAGMENT_SINGLE_COLOR_FILE);
     Shader ourShader1(VERTEX_FILE, FRAGMENT_FILE);
-    Shader ourShader1SingleColor(VERTEX_FILE, FRAGMENT_SINGLE_COLOR_FILE);
+    Shader ourShader1SingleColor(VERTEX_SINGLE_COLOR_FILE, FRAGMENT_SINGLE_COLOR_FILE);
     Shader ourShader2(VERTEX_FILE, FRAGMENT_FILE);
-    Shader ourShader2SingleColor(VERTEX_FILE, FRAGMENT_SINGLE_COLOR_FILE);
+    Shader ourShader2SingleColor(VERTEX_SINGLE_COLOR_FILE, FRAGMENT_SINGLE_COLOR_FILE);
+    Shader shader(VERTEX_FILE, FRAGMENT_CUBE_FILE);
+    Shader shaderSingleColor(VERTEX_SINGLE_COLOR_FILE, FRAGMENT_SINGLE_COLOR_FILE);
 
     // load models
     // -----------
@@ -102,9 +150,28 @@ int main()
     Model ourModel1SingleColor(RESOURCES_MODEL_DIR"/lisa/Lisa.obj");
     Model ourModel2(RESOURCES_MODEL_DIR"/jean/jean.pmx");
     Model ourModel2SingleColor(RESOURCES_MODEL_DIR"/jean/jean.pmx");
+
+    // cube VAO
+    unsigned int cubeVAO, cubeVBO;
+    glGenVertexArrays(1, &cubeVAO);
+    glGenBuffers(1, &cubeVBO);
+    glBindVertexArray(cubeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), &cubeVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glBindVertexArray(0);
+    unsigned int cubeTexture = loadTexture(RESOURCES_DIR"/textures/marble.jpg");
     
     // draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    shader.use();
+    shader.setInt("texture1", 0);
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -114,8 +181,7 @@ int main()
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
 
-    float scales[3] = {1.1f, 1.015f, 1.1f};
-    float translate_dy = -0.343f;
+    float scale = 0.1f;
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
@@ -158,10 +224,8 @@ int main()
         ourShaderSingleColor.use();
         ourShaderSingleColor.setMat4("view", view);
         ourShaderSingleColor.setMat4("projection", projection);
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(-7.5f, -12.0f + translate_dy, -30.0f)); // translate it down so it's at the center of the scene
-        model = glm::scale(model, glm::vec3(scales[0], scales[1], scales[2]));
         ourShaderSingleColor.setMat4("model", model);
+        ourShaderSingleColor.setFloat("scale", scale);
 
         ourShader1.use();
 
@@ -181,10 +245,8 @@ int main()
         ourShader1SingleColor.use();
         ourShader1SingleColor.setMat4("view", view);
         ourShader1SingleColor.setMat4("projection", projection);
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(7.5f, -12.0f + translate_dy, -30.0f)); // translate it down so it's at the center of the scene
-        model = glm::scale(model, glm::vec3(scales[0], scales[1], scales[2]));
         ourShader1SingleColor.setMat4("model", model);
+        ourShader1SingleColor.setFloat("scale", scale);
 
         ourShader2.use();
 
@@ -204,10 +266,23 @@ int main()
         ourShader2SingleColor.use();
         ourShader2SingleColor.setMat4("view", view);
         ourShader2SingleColor.setMat4("projection", projection);
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, -12.0f + translate_dy, -40.0f)); // translate it down so it's at the center of the scene
-        model = glm::scale(model, glm::vec3(scales[0], scales[1], scales[2]));
         ourShader2SingleColor.setMat4("model", model);
+        ourShader2SingleColor.setFloat("scale", scale);
+
+        shader.use();
+        shader.setMat4("view", view);
+        shader.setMat4("projection", projection);
+        model = glm::translate(model, glm::vec3(0.0f, 7.0f, 30.0f));
+        shader.setMat4("model", model);
+        glBindVertexArray(cubeVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, cubeTexture);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        shaderSingleColor.use();
+        shaderSingleColor.setMat4("view", view);
+        shaderSingleColor.setMat4("projection", projection);
+        shaderSingleColor.setMat4("model", model);
+        shaderSingleColor.setFloat("scale", scale);
 
         glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
         glStencilMask(0x00);
@@ -218,6 +293,10 @@ int main()
         ourModel1SingleColor.Draw(ourShaderSingleColor.ID);
         ourShader2SingleColor.use();
         ourModel2SingleColor.Draw(ourShaderSingleColor.ID);
+        shaderSingleColor.use();
+        glBindVertexArray(cubeVAO);
+        glBindTexture(GL_TEXTURE_2D, cubeTexture);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindVertexArray(0);
         glStencilMask(0xFF);
         glStencilFunc(GL_ALWAYS, 0, 0xFF);
@@ -232,8 +311,7 @@ int main()
         ImGui::Text("Press \"1\" to show cursor and switch to setting mode.");
         ImGui::Text("Press \"2\" to hide cursor and finishe setting mode.");
         ImGui::Text("Current cursor mode: %d", g_bCaptureCursor ? 2 : 1);
-        ImGui::SliderFloat("Translate_y", &translate_dy, -2.0f, 1.0f, "%.3f");
-        ImGui::SliderFloat3("Scales", scales, 0.9f, 1.5f, "%.3f");
+        ImGui::SliderFloat("scale", &scale, 0.0f, 2.0f, "%.3f");
 
         ImGui::End();
 
@@ -324,4 +402,43 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
     camera.ProcessMouseScroll(static_cast<float>(yoffset));
+}
+
+// utility function for loading a 2D texture from file
+// ---------------------------------------------------
+unsigned int loadTexture(char const * path)
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+
+    int width, height, nrComponents;
+    unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
+    if (data)
+    {
+        GLenum format;
+        if (nrComponents == 1)
+            format = GL_RED;
+        else if (nrComponents == 3)
+            format = GL_RGB;
+        else if (nrComponents == 4)
+            format = GL_RGBA;
+
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        stbi_image_free(data);
+    }
+    else
+    {
+        std::cout << "Texture failed to load at path: " << path << std::endl;
+        stbi_image_free(data);
+    }
+
+    return textureID;
 }

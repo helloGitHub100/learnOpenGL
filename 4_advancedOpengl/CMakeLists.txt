@@ -4,3 +4,4 @@ add_custom_target(4_advancedOpengl)
 
 add_subdirectory(4_2StencilTesting)
 add_subdirectory(4_2StencilTesting-1)
+add_subdirectory(4_2StencilTesting-2)
