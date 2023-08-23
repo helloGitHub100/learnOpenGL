@@ -133,23 +133,23 @@ int main()
 
     // build and compile shaders
     // -------------------------
-    Shader ourShader(VERTEX_FILE, FRAGMENT_FILE);
-    Shader ourShaderSingleColor(VERTEX_SINGLE_COLOR_FILE, FRAGMENT_SINGLE_COLOR_FILE);
-    Shader ourShader1(VERTEX_FILE, FRAGMENT_FILE);
-    Shader ourShader1SingleColor(VERTEX_SINGLE_COLOR_FILE, FRAGMENT_SINGLE_COLOR_FILE);
-    Shader ourShader2(VERTEX_FILE, FRAGMENT_FILE);
-    Shader ourShader2SingleColor(VERTEX_SINGLE_COLOR_FILE, FRAGMENT_SINGLE_COLOR_FILE);
-    Shader shader(VERTEX_FILE, FRAGMENT_CUBE_FILE);
-    Shader shaderSingleColor(VERTEX_SINGLE_COLOR_FILE, FRAGMENT_SINGLE_COLOR_FILE);
+    Shader humanShader(VERTEX_FILE, FRAGMENT_FILE);
+    Shader humanShaderSingleColor(VERTEX_SINGLE_COLOR_FILE, FRAGMENT_SINGLE_COLOR_FILE);
+    Shader humanShader1(VERTEX_FILE, FRAGMENT_FILE);
+    Shader humanShader1SingleColor(VERTEX_SINGLE_COLOR_FILE, FRAGMENT_SINGLE_COLOR_FILE);
+    Shader humanShader2(VERTEX_FILE, FRAGMENT_FILE);
+    Shader humanShader2SingleColor(VERTEX_SINGLE_COLOR_FILE, FRAGMENT_SINGLE_COLOR_FILE);
+    Shader shaderCube(VERTEX_FILE, FRAGMENT_FILE);
+    Shader shaderCubeSingleColor(VERTEX_SINGLE_COLOR_FILE, FRAGMENT_SINGLE_COLOR_FILE);
 
     // load models
     // -----------
-    Model ourModel(RESOURCES_MODEL_DIR"/babala/babala.pmx");
-    Model ourModelSingleColor(RESOURCES_MODEL_DIR"/babala/babala.pmx");
-    Model ourModel1(RESOURCES_MODEL_DIR"/lisa/Lisa.obj");
-    Model ourModel1SingleColor(RESOURCES_MODEL_DIR"/lisa/Lisa.obj");
-    Model ourModel2(RESOURCES_MODEL_DIR"/jean/jean.pmx");
-    Model ourModel2SingleColor(RESOURCES_MODEL_DIR"/jean/jean.pmx");
+    Model humanModel(RESOURCES_MODEL_DIR"/babala/babala.pmx");
+    Model humanModelSingleColor(RESOURCES_MODEL_DIR"/babala/babala.pmx");
+    Model humanModel1(RESOURCES_MODEL_DIR"/lisa/Lisa.obj");
+    Model humanModel1SingleColor(RESOURCES_MODEL_DIR"/lisa/Lisa.obj");
+    Model humanModel2(RESOURCES_MODEL_DIR"/jean/jean.pmx");
+    Model humanModel2SingleColor(RESOURCES_MODEL_DIR"/jean/jean.pmx");
 
     // cube VAO
     unsigned int cubeVAO, cubeVBO;
@@ -170,8 +170,8 @@ int main()
     // draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-    shader.use();
-    shader.setInt("texture1", 0);
+    shaderCube.use();
+    shaderCube.setInt("texture_diffuse1", 0);
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -207,9 +207,9 @@ int main()
         glm::mat4 view = camera.GetViewMatrix();
         
         // don't forget to enable shader before setting uniforms
-        ourShader.use();
-        ourShader.setMat4("projection", projection);
-        ourShader.setMat4("view", view);
+        humanShader.use();
+        humanShader.setMat4("projection", projection);
+        humanShader.setMat4("view", view);
 
         glStencilFunc(GL_ALWAYS, 1, 0xFF);
         glStencilMask(0xFF);
@@ -218,82 +218,82 @@ int main()
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(-7.5f, -12.0f, -30.0f)); // translate it down so it's at the center of the scene
         model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
-        ourShader.setMat4("model", model);
-        ourModel.Draw(ourShader.ID);
+        humanShader.setMat4("model", model);
+        humanModel.Draw(humanShader.ID);
 
-        ourShaderSingleColor.use();
-        ourShaderSingleColor.setMat4("view", view);
-        ourShaderSingleColor.setMat4("projection", projection);
-        ourShaderSingleColor.setMat4("model", model);
-        ourShaderSingleColor.setFloat("scale", scale);
+        humanShaderSingleColor.use();
+        humanShaderSingleColor.setMat4("view", view);
+        humanShaderSingleColor.setMat4("projection", projection);
+        humanShaderSingleColor.setMat4("model", model);
+        humanShaderSingleColor.setFloat("scale", scale);
 
-        ourShader1.use();
+        humanShader1.use();
 
         // view/projection transformations
         projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         view = camera.GetViewMatrix();
-        ourShader1.setMat4("projection", projection);
-        ourShader1.setMat4("view", view);
+        humanShader1.setMat4("projection", projection);
+        humanShader1.setMat4("view", view);
 
         // render the loaded model
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(7.5f, -12.0f, -30.0f)); // translate it down so it's at the center of the scene
         model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
-        ourShader1.setMat4("model", model);
-        ourModel1.Draw(ourShader1.ID);
+        humanShader1.setMat4("model", model);
+        humanModel1.Draw(humanShader1.ID);
 
-        ourShader1SingleColor.use();
-        ourShader1SingleColor.setMat4("view", view);
-        ourShader1SingleColor.setMat4("projection", projection);
-        ourShader1SingleColor.setMat4("model", model);
-        ourShader1SingleColor.setFloat("scale", scale);
+        humanShader1SingleColor.use();
+        humanShader1SingleColor.setMat4("view", view);
+        humanShader1SingleColor.setMat4("projection", projection);
+        humanShader1SingleColor.setMat4("model", model);
+        humanShader1SingleColor.setFloat("scale", scale);
 
-        ourShader2.use();
+        humanShader2.use();
 
         // view/projection transformations
         projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         view = camera.GetViewMatrix();
-        ourShader2.setMat4("projection", projection);
-        ourShader2.setMat4("view", view);
+        humanShader2.setMat4("projection", projection);
+        humanShader2.setMat4("view", view);
 
         // render the loaded model
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(0.0f, -12.0f, -40.0f)); // translate it down so it's at the center of the scene
         model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
-        ourShader2.setMat4("model", model);
-        ourModel2.Draw(ourShader2.ID);
+        humanShader2.setMat4("model", model);
+        humanModel2.Draw(humanShader2.ID);
 
-        ourShader2SingleColor.use();
-        ourShader2SingleColor.setMat4("view", view);
-        ourShader2SingleColor.setMat4("projection", projection);
-        ourShader2SingleColor.setMat4("model", model);
-        ourShader2SingleColor.setFloat("scale", scale);
+        humanShader2SingleColor.use();
+        humanShader2SingleColor.setMat4("view", view);
+        humanShader2SingleColor.setMat4("projection", projection);
+        humanShader2SingleColor.setMat4("model", model);
+        humanShader2SingleColor.setFloat("scale", scale);
 
-        shader.use();
-        shader.setMat4("view", view);
-        shader.setMat4("projection", projection);
+        shaderCube.use();
+        shaderCube.setMat4("view", view);
+        shaderCube.setMat4("projection", projection);
         model = glm::translate(model, glm::vec3(0.0f, 7.0f, 30.0f));
-        shader.setMat4("model", model);
+        shaderCube.setMat4("model", model);
         glBindVertexArray(cubeVAO);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, cubeTexture);
         glDrawArrays(GL_TRIANGLES, 0, 36);
-        shaderSingleColor.use();
-        shaderSingleColor.setMat4("view", view);
-        shaderSingleColor.setMat4("projection", projection);
-        shaderSingleColor.setMat4("model", model);
-        shaderSingleColor.setFloat("scale", scale);
+        shaderCubeSingleColor.use();
+        shaderCubeSingleColor.setMat4("view", view);
+        shaderCubeSingleColor.setMat4("projection", projection);
+        shaderCubeSingleColor.setMat4("model", model);
+        shaderCubeSingleColor.setFloat("scale", scale);
 
         glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
         glStencilMask(0x00);
         glDisable(GL_DEPTH_TEST);
-        ourShaderSingleColor.use();
-        ourModelSingleColor.Draw(ourShaderSingleColor.ID);
-        ourShader1SingleColor.use();
-        ourModel1SingleColor.Draw(ourShaderSingleColor.ID);
-        ourShader2SingleColor.use();
-        ourModel2SingleColor.Draw(ourShaderSingleColor.ID);
-        shaderSingleColor.use();
+        humanShaderSingleColor.use();
+        humanModelSingleColor.Draw(humanShaderSingleColor.ID);
+        humanShader1SingleColor.use();
+        humanModel1SingleColor.Draw(humanShaderSingleColor.ID);
+        humanShader2SingleColor.use();
+        humanModel2SingleColor.Draw(humanShaderSingleColor.ID);
+        shaderCubeSingleColor.use();
         glBindVertexArray(cubeVAO);
         glBindTexture(GL_TEXTURE_2D, cubeTexture);
         glDrawArrays(GL_TRIANGLES, 0, 36);

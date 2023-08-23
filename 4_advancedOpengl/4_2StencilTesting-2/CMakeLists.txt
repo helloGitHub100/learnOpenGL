@@ -7,7 +7,6 @@ add_compile_definitions(VERTEX_FILE=\"${CMAKE_CURRENT_SOURCE_DIR}/vertexShader.g
 add_compile_definitions(VERTEX_SINGLE_COLOR_FILE=\"${CMAKE_CURRENT_SOURCE_DIR}/vertexShaderSingleColor.glsl\")
 add_compile_definitions(FRAGMENT_FILE=\"${CMAKE_CURRENT_SOURCE_DIR}/fragmentShader.glsl\")
 add_compile_definitions(FRAGMENT_SINGLE_COLOR_FILE=\"${CMAKE_CURRENT_SOURCE_DIR}/fragmentShaderSingleColor.glsl\")
-add_compile_definitions(FRAGMENT_CUBE_FILE=\"${CMAKE_CURRENT_SOURCE_DIR}/fragmentCube.glsl\")
 add_compile_definitions(STB_IMAGE_IMPLEMENTATION)
 add_compile_definitions(RESOURCES_MODEL_DIR=\"${RESOURCES_DIR}/objects\")
 
