@@ -12,6 +12,9 @@
 
 #include <iostream>
 #include <map>
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -32,6 +35,12 @@ bool firstMouse = true;
 // timing
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
+
+bool g_bCaptureCursor = true;
+
+bool g_bEnableCULL_FACE = true;
+bool g_bCullFace_BACK = true;
+bool g_bFrontFace_CCW = true;
 
 int main()
 {
@@ -85,47 +94,47 @@ int main()
     // ------------------------------------------------------------------
     float cubeVertices[] = {
         // positions          // texture Coords
-        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-         0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-
-        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, // Bottom-left
+        0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right
+        0.5f, -0.5f, -0.5f,  1.0f, 0.0f, // bottom-right         
+        0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, // bottom-left
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, // top-left
+        // Front face
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-left
+        0.5f, -0.5f,  0.5f,  1.0f, 0.0f, // bottom-right
+        0.5f,  0.5f,  0.5f,  1.0f, 1.0f, // top-right
+        0.5f,  0.5f,  0.5f,  1.0f, 1.0f, // top-right
+        -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, // top-left
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-left
+        // Left face
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-right
+        -0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-left
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-left
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-left
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-right
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-right
+        // Right face
+        0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-left
+        0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-right
+        0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right         
+        0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-right
+        0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-left
+        0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-left     
+        // Bottom face
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // top-right
+        0.5f, -0.5f, -0.5f,  1.0f, 1.0f, // top-left
+        0.5f, -0.5f,  0.5f,  1.0f, 0.0f, // bottom-left
+        0.5f, -0.5f,  0.5f,  1.0f, 0.0f, // bottom-left
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-right
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // top-right
+        // Top face
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, // top-left
+        0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // bottom-right
+        0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right     
+        0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // bottom-right
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, // top-left
+        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f  // bottom-left
     };
     float planeVertices[] = {
         // positions          // texture Coords 
@@ -204,10 +213,25 @@ int main()
     shader.use();
     shader.setInt("texture1", 0);
 
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO &io = ImGui::GetIO(); (void)io;
+
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 330");
+
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
     {
+        if (g_bEnableCULL_FACE)
+        glEnable(GL_CULL_FACE);
+        else
+            glDisable(GL_CULL_FACE);
+        glCullFace(g_bCullFace_BACK ? GL_BACK : GL_FRONT);
+        glFrontFace(g_bFrontFace_CCW ? GL_CCW : GL_CW);
+
         // per-frame time logic
         // --------------------
         float currentFrame = static_cast<float>(glfwGetTime());
@@ -267,13 +291,31 @@ int main()
             glDrawArrays(GL_TRIANGLES, 0, 6);
         }
 
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        ImGui::Begin("Param Setting");
+        ImGui::Text("Press \"1\" to show cursor and switch to setting mode.");
+        ImGui::Text("Press \"2\" to hide cursor and finishe setting mode.");
+        ImGui::Text("Current cursor mode: %d", g_bCaptureCursor ? 2 : 1);
+        ImGui::Checkbox("Enable CULL_FACE", &g_bEnableCULL_FACE);
+        ImGui::Checkbox("CullFace Back", &g_bCullFace_BACK);
+        ImGui::Checkbox("FrontFace CCW", &g_bFrontFace_CCW);
+
+        ImGui::End();
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
-
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
     // optional: de-allocate all resources once they've outlived their purpose:
     // ------------------------------------------------------------------------
     glDeleteVertexArrays(1, &cubeVAO);
@@ -300,6 +342,20 @@ void processInput(GLFWwindow *window)
         camera.ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         camera.ProcessKeyboard(RIGHT, deltaTime);
+
+    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
+        if (g_bCaptureCursor)
+        {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            g_bCaptureCursor = false;
+        }
+    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
+        if (!g_bCaptureCursor)
+        {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            g_bCaptureCursor = true;
+            firstMouse = true;
+        }
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -315,6 +371,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 // -------------------------------------------------------
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 {
+    if (!g_bCaptureCursor)
+        return;
     float xpos = static_cast<float>(xposIn);
     float ypos = static_cast<float>(yposIn);
     if (firstMouse)
