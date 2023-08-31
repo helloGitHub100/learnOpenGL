@@ -41,8 +41,8 @@ float lastFrame = 0.0f;
 bool g_bCaptureCursor = true;
 int g_envMappingMode = 0; //0: reflect, 1: refract
 float g_refractRatio = 1.52f;
-bool g_bDiffuse = true;
-bool g_bReflectMaps = true;
+bool g_bDiffuse = false;
+bool g_bReflectMaps = false;
 
 int main()
 {
