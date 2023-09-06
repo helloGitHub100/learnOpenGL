@@ -4,3 +4,6 @@ add_custom_target(5_advanced_lighting)
 
 add_subdirectory(5_1.advanced_lighting)
 add_subdirectory(5_2.gamma_correction)
+add_subdirectory(5_3.1.1.shadow_mapping_depth)
+add_subdirectory(5_3.1.2.shadow_mapping_base)
+add_subdirectory(5_3.1.3.shadow_mapping)
