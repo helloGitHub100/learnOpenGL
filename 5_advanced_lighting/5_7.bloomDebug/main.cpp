@@ -184,6 +184,8 @@ int main()
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO &io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -355,6 +357,7 @@ int main()
         ImGui::Text("Current cursor mode: %d", g_bCaptureCursor ? 2 : 1);
         ImGui::SliderFloat("High light threshold", &g_highLightThreshold, 0.4, 2.0, "%.2f");
         ImGui::SliderInt("Blur count", &g_blurCount, 1, 20);
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 
         ImGui::End();
         ImGui::Render();
