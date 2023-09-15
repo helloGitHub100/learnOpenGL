@@ -115,6 +115,9 @@ int main()
         modelMatrices[i] = model;
     }
 
+    int nbFrames = 0;
+    char title[256];
+    float deltaTimeFPS = 0.0f;
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
@@ -124,6 +127,16 @@ int main()
         float currentFrame = static_cast<float>(glfwGetTime());
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
+
+        deltaTimeFPS += deltaTime;
+        if (deltaTimeFPS >= 1.0 && nbFrames > 0)
+        {
+            sprintf_s(title, 256, "LearnOpenGL @ %.3f ms/frame (%.1f FPS)", deltaTimeFPS * 1000 / float(nbFrames), float(nbFrames) / deltaTimeFPS);
+            glfwSetWindowTitle(window, title);
+            nbFrames = 0;
+            deltaTimeFPS = 0.0f;
+        }
+        nbFrames++;
 
         // input
         // -----

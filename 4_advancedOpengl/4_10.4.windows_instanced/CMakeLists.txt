@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.0.0)
 
-project (4_10.4.windows_instanced C CXX)#修改1：修改为对应文件名
+project (4_10.3.asteroids_instanced C CXX)#修改1：修改为对应文件名
 message(STATUS "project= ${PROJECT_NAME}" )
 
 add_compile_definitions(VERTEX_FILE=\"${CMAKE_CURRENT_SOURCE_DIR}/10.3.asteroids.vs\")
