@@ -116,8 +116,9 @@ int main()
     // generate a large list of semi-random model transformation matrices
     // ------------------------------------------------------------------
     unsigned int amount = 100000;
-    glm::mat4* modelMatrices;
-    modelMatrices = new glm::mat4[amount];
+    vector<glm::mat4> modelMatrices;
+    //glm::mat4* modelMatrices;
+    //modelMatrices = new glm::mat4[amount];
     srand(static_cast<unsigned int>(glfwGetTime())); // initialize random seed
     float radius = 150.0;
     float offset = 25.0f;
@@ -143,7 +144,8 @@ int main()
         model = glm::rotate(model, rotAngle, glm::vec3(0.4f, 0.6f, 0.8f));
 
         // 4. now add to list of matrices
-        modelMatrices[i] = model;
+        //modelMatrices[i] = model;
+        modelMatrices.push_back(model);
     }
 
     // configure instanced array
@@ -151,7 +153,7 @@ int main()
     unsigned int buffer;
     glGenBuffers(1, &buffer);
     glBindBuffer(GL_ARRAY_BUFFER, buffer);
-    glBufferData(GL_ARRAY_BUFFER, amount * sizeof(glm::mat4), &modelMatrices[0], GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, amount * sizeof(glm::mat4), modelMatrices.data(), GL_STATIC_DRAW);
 
     glBindVertexArray(transparentVAO);
     // set attribute pointers for matrix (4 times vec4)
@@ -213,23 +215,7 @@ int main()
                 modelMatrices[i] = it->second;
             }
             glBindBuffer(GL_ARRAY_BUFFER, buffer);
-            glBufferData(GL_ARRAY_BUFFER, amount * sizeof(glm::mat4), &modelMatrices[0], GL_STATIC_DRAW);
-
-            glBindVertexArray(transparentVAO);
-            // set attribute pointers for matrix (4 times vec4)
-            glEnableVertexAttribArray(3);
-            glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)0);
-            glEnableVertexAttribArray(4);
-            glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(sizeof(glm::vec4)));
-            glEnableVertexAttribArray(5);
-            glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(2 * sizeof(glm::vec4)));
-            glEnableVertexAttribArray(6);
-            glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(3 * sizeof(glm::vec4)));
-
-            glVertexAttribDivisor(3, 1);
-            glVertexAttribDivisor(4, 1);
-            glVertexAttribDivisor(5, 1);
-            glVertexAttribDivisor(6, 1);
+            glBufferData(GL_ARRAY_BUFFER, amount * sizeof(glm::mat4), modelMatrices.data(), GL_STATIC_DRAW);
         }
         
         // render
@@ -273,7 +259,7 @@ int main()
     glDeleteBuffers(1, &buffer);
 
     glfwTerminate();
-    delete []modelMatrices;
+    //delete []modelMatrices;
     return 0;
 }
 
