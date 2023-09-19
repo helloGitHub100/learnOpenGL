@@ -44,6 +44,7 @@ float lastFrame = 0.0f;
 
 // light
 const unsigned int NR_LIGHTS = 32;
+const unsigned int regmentLightArrayLength = 500;
 vector<glm::mat4> lightCubeModels;
 std::vector<glm::vec3> lightPositions;
 std::vector<glm::vec3> lightColors;
@@ -183,8 +184,8 @@ int main()
     const float constant = 1.0f; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)
     const float linear = 0.7f;
     const float quadratic = 1.8f;
-    int renderPointLightLoopNumber = NR_LIGHTS / 500;
-    if (NR_LIGHTS % 500 != 0)
+    int renderPointLightLoopNumber = NR_LIGHTS / regmentLightArrayLength;
+    if (NR_LIGHTS % regmentLightArrayLength != 0)
         renderPointLightLoopNumber++;
     float ambientStrength = 0.1 / renderPointLightLoopNumber;
     // update attenuation parameters and calculate radius
@@ -322,7 +323,6 @@ int main()
         // 2. lighting pass: calculate lighting by iterating over a screen filled quad pixel-by-pixel using the gbuffer's content.
         // -----------------------------------------------------------------------------------------------------------------------
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        //shaderLightingPass.use();
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, gPosition);
         glActiveTexture(GL_TEXTURE1);
@@ -371,19 +371,19 @@ int main()
         glBlendFunc(GL_ONE, GL_ONE);
         for (size_t loopIndex = 0; loopIndex < renderPointLightLoopNumber; loopIndex++)
         {
-            unsigned int currentLightNumber = 500;
+            unsigned int currentLightNumber = regmentLightArrayLength;
             if (loopIndex + 1 == renderPointLightLoopNumber)
             {
-                currentLightNumber = NR_LIGHTS % 500;
+                currentLightNumber = NR_LIGHTS % regmentLightArrayLength;
                 if (0 == currentLightNumber)
-                    currentLightNumber = 500;
+                    currentLightNumber = regmentLightArrayLength;
                 
             }
             shaderLightingPass.setInt("currentLightNumber", currentLightNumber);
             for (unsigned int i = 0; i < currentLightNumber; i++)
             {
-                shaderLightingPass.setVec3("lights[" + std::to_string(i) + "].Position", lightPositions[loopIndex * 500 + i]);
-                shaderLightingPass.setVec3("lights[" + std::to_string(i) + "].Color", lightColors[loopIndex * 500 + i]);
+                shaderLightingPass.setVec3("lights[" + std::to_string(i) + "].Position", lightPositions[loopIndex * regmentLightArrayLength + i]);
+                shaderLightingPass.setVec3("lights[" + std::to_string(i) + "].Color", lightColors[loopIndex * regmentLightArrayLength + i]);
             }
             renderQuad();
         }

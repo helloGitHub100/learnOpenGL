@@ -143,9 +143,23 @@ int main()
     // lighting info
     // -------------
     const unsigned int NR_LIGHTS = 32;
+    const unsigned int regmentLightArrayLength = 300;
     std::vector<glm::vec3> lightPositions;
     std::vector<glm::vec3> lightColors;
+    vector<float> radiusVec;
     srand(13);
+    const float constant = 1.0f; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)
+    const float linear = 0.7f;
+    const float quadratic = 1.8f;
+    int renderPointLightLoopNumber = NR_LIGHTS / regmentLightArrayLength;
+    if (NR_LIGHTS % regmentLightArrayLength != 0)
+        renderPointLightLoopNumber++;
+    float ambientStrength = 0.1 / renderPointLightLoopNumber;
+    // update attenuation parameters and calculate radius
+    shaderLightingPass.use();
+    shaderLightingPass.setFloat("Linear", linear);
+    shaderLightingPass.setFloat("Quadratic", quadratic);
+    shaderLightingPass.setFloat("ambientStrength", ambientStrength);
     for (unsigned int i = 0; i < NR_LIGHTS; i++)
     {
         // calculate slightly random offsets
@@ -154,10 +168,18 @@ int main()
         float zPos = static_cast<float>(((rand() % 100) / 100.0) * 6.0 - 3.0);
         lightPositions.push_back(glm::vec3(xPos, yPos, zPos));
         // also calculate random color
-        float rColor = static_cast<float>(((rand() % 100) / 200.0f) + 0.5); // between 0.5 and 1.)
-        float gColor = static_cast<float>(((rand() % 100) / 200.0f) + 0.5); // between 0.5 and 1.)
-        float bColor = static_cast<float>(((rand() % 100) / 200.0f) + 0.5); // between 0.5 and 1.)
+        float rColor = static_cast<float>(((rand() % 100) / 200.0f) + 0.5); // between 0.5 and 1.0
+        float gColor = static_cast<float>(((rand() % 100) / 200.0f) + 0.5); // between 0.5 and 1.0
+        float bColor = static_cast<float>(((rand() % 100) / 200.0f) + 0.5); // between 0.5 and 1.0
         lightColors.push_back(glm::vec3(rColor, gColor, bColor));
+
+        shaderLightingPass.use();
+        shaderLightingPass.setVec3("lights[" + std::to_string(i) + "].Position", lightPositions[i]);
+        shaderLightingPass.setVec3("lights[" + std::to_string(i) + "].Color", lightColors[i]);
+        // then calculate radius of light volume/sphere
+        const float maxBrightness = std::fmaxf(std::fmaxf(lightColors[i].r, lightColors[i].g), lightColors[i].b);
+        float radius = (-linear + std::sqrt(linear * linear - 4 * quadratic * (constant - (256.0f / 5.0f) * maxBrightness))) / (2.0f * quadratic);
+        radiusVec.push_back(radius);
     }
 
     // shader configuration
@@ -230,24 +252,31 @@ int main()
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
         // send light relevant uniforms
-        for (unsigned int i = 0; i < lightPositions.size(); i++)
-        {
-            shaderLightingPass.setVec3("lights[" + std::to_string(i) + "].Position", lightPositions[i]);
-            shaderLightingPass.setVec3("lights[" + std::to_string(i) + "].Color", lightColors[i]);
-            // update attenuation parameters and calculate radius
-            const float constant = 1.0f; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)
-            const float linear = 0.7f;
-            const float quadratic = 1.8f;
-            shaderLightingPass.setFloat("lights[" + std::to_string(i) + "].Linear", linear);
-            shaderLightingPass.setFloat("lights[" + std::to_string(i) + "].Quadratic", quadratic);
-            // then calculate radius of light volume/sphere
-            const float maxBrightness = std::fmaxf(std::fmaxf(lightColors[i].r, lightColors[i].g), lightColors[i].b);
-            float radius = (-linear + std::sqrt(linear * linear - 4 * quadratic * (constant - (256.0f / 5.0f) * maxBrightness))) / (2.0f * quadratic);
-            shaderLightingPass.setFloat("lights[" + std::to_string(i) + "].Radius", radius);
-        }
         shaderLightingPass.setVec3("viewPos", camera.Position);
         // finally render quad
-        renderQuad();
+        glEnable(GL_BLEND);
+        glBlendEquation(GL_FUNC_ADD);
+        glBlendFunc(GL_ONE, GL_ONE);
+        for (size_t loopIndex = 0; loopIndex < renderPointLightLoopNumber; loopIndex++)
+        {
+            unsigned int currentLightNumber = regmentLightArrayLength;
+            if (loopIndex + 1 == renderPointLightLoopNumber)
+            {
+                currentLightNumber = NR_LIGHTS % regmentLightArrayLength;
+                if (0 == currentLightNumber)
+                    currentLightNumber = regmentLightArrayLength;
+                
+            }
+            shaderLightingPass.setInt("currentLightNumber", currentLightNumber);
+            for (unsigned int i = 0; i < currentLightNumber; i++)
+            {
+                shaderLightingPass.setVec3("lights[" + std::to_string(i) + "].Position", lightPositions[loopIndex * regmentLightArrayLength + i]);
+                shaderLightingPass.setVec3("lights[" + std::to_string(i) + "].Color", lightColors[loopIndex * regmentLightArrayLength + i]);
+                shaderLightingPass.setFloat("lights[" + std::to_string(i) + "].Radius", radiusVec[loopIndex * regmentLightArrayLength + i]);
+            }
+            renderQuad();
+        }
+        glDisable(GL_BLEND);
 
         // 2.5. copy content of geometry's depth buffer to default framebuffer's depth buffer
         // ----------------------------------------------------------------------------------
