@@ -249,6 +249,7 @@ int main()
         // send light relevant uniforms
         shaderLightingPass.setVec3("viewPos", camera.Position);
         // finally render quad
+        glDisable(GL_DEPTH_TEST);
         glEnable(GL_BLEND);
         glBlendEquation(GL_FUNC_ADD);
         glBlendFunc(GL_ONE, GL_ONE);
@@ -271,6 +272,7 @@ int main()
             renderQuad();
         }
         glDisable(GL_BLEND);
+        glEnable(GL_DEPTH_TEST);
 
         // 2.5. copy content of geometry's depth buffer to default framebuffer's depth buffer
         // ----------------------------------------------------------------------------------
