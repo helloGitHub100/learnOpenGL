@@ -9,6 +9,10 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "camera.h"
 
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
 unsigned int loadTexture(const char *path);
@@ -29,8 +33,14 @@ float lastFrame = 0.0f; // 上一帧的时间
 
 glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
 
+//ImGui Params
+bool g_bCaptureCursor = true;
+float g_texCoordScale = 1.0f;
+
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
+    if (!g_bCaptureCursor)
+        return;
     if(firstMouse) // 这个bool变量初始时是设定为true的
     {
         lastX = xpos;
@@ -195,14 +205,24 @@ int main()
     ourShader.setInt("material.diffuse",  0);
     ourShader.setInt("material.specular", 1);
     ourShader.setInt("material.emission", 2);
+    
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO &io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 330");
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
     {
         float currentTime = (float)glfwGetTime();
         float radius = 5.0f;
-        float circleX = sin(currentTime) * radius;
-        float circleZ = cos(currentTime) * radius;
+        float circleX = sin(0.0) * radius;
+        float circleZ = cos(0.0) * radius;
         lightPos.x = circleX;
         lightPos.z = circleZ;
         // input
@@ -223,6 +243,7 @@ int main()
         ourShader.setFloat("light.ambient",  vector<float>({0.2f, 0.2f, 0.2f}));
         ourShader.setFloat("light.diffuse",  vector<float>({0.5f, 0.5f, 0.5f})); // 将光照调暗了一些以搭配场景
         ourShader.setFloat("light.specular", vector<float>({1.0f, 1.0f, 1.0f})); 
+        ourShader.setFloat("scale", g_texCoordScale);
         /*glm::mat4 model;
         model = glm::rotate(model, (float)glfwGetTime() * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
         ourShader.setMatrixFloat("model", vector<glm::mat4>({model}), 4);*/
@@ -239,7 +260,7 @@ int main()
             glm::mat4 model;
             model = glm::translate(model, cubePositions[i]);
             float angle = 20.0f * (i + 1); 
-            model = glm::rotate(model, currentTime * glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+            model = glm::rotate(model, 0.3f * glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
             ourShader.setMatrixFloat("model", vector<glm::mat4>({model}), 4);
 
             // bind diffuse map
@@ -266,11 +287,27 @@ int main()
         glBindVertexArray(lightVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        ImGui::Begin("Param Setting");
+        ImGui::Text("Press \"1\" to show cursor and switch to setting mode.");
+        ImGui::Text("Press \"2\" to hide cursor and finishe setting mode.");
+        ImGui::Text("Current cursor mode: %d", g_bCaptureCursor ? 2 : 1);
+        ImGui::SliderFloat("TexCoords scale", &g_texCoordScale, 0.1, 1.0, "%.1f");
+
+        ImGui::End();
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 
     // optional: de-allocate all resources once they've outlived their purpose:
     // ------------------------------------------------------------------------
@@ -316,6 +353,19 @@ void processInput(GLFWwindow *window)
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         camera.ProcessKeyboard(RIGHT, deltaTime);
     //camera.Position.y = 0.0f; // <-- this one-liner keeps the user at the ground level (xz plane)
+    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
+        if (g_bCaptureCursor)
+        {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            g_bCaptureCursor = false;
+        }
+    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
+        if (!g_bCaptureCursor)
+        {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            g_bCaptureCursor = true;
+            firstMouse = true;
+        }
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes

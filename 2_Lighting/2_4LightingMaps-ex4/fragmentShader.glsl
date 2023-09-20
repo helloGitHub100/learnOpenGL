@@ -23,6 +23,7 @@ in vec2 TexCoords;
 uniform vec3 viewPos;
 uniform Material material;
 uniform Light light;
+uniform float scale = 1.0;
 
 void main()
 {
@@ -42,7 +43,9 @@ void main()
     vec3 specular = light.specular * spec * vec3(texture(material.specular, TexCoords));
 
     // emission
-    vec3 emission = texture(material.emission, TexCoords).rgb;
+    float offset = (1.0 - scale) / 2;
+    vec2 TexCoordsTemp = TexCoords * vec2(scale) + vec2(offset);
+    vec3 emission = texture(material.emission, TexCoordsTemp).rgb;
 
     vec3 result = ambient + diffuse + specular + emission;
     FragColor = vec4(result, 1.0);
