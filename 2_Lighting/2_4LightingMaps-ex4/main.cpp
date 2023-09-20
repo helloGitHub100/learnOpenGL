@@ -221,8 +221,8 @@ int main()
     {
         float currentTime = (float)glfwGetTime();
         float radius = 5.0f;
-        float circleX = sin(0.0) * radius;
-        float circleZ = cos(0.0) * radius;
+        float circleX = sin(currentTime) * radius;
+        float circleZ = cos(currentTime) * radius;
         lightPos.x = circleX;
         lightPos.z = circleZ;
         // input
@@ -260,7 +260,7 @@ int main()
             glm::mat4 model;
             model = glm::translate(model, cubePositions[i]);
             float angle = 20.0f * (i + 1); 
-            model = glm::rotate(model, 0.3f * glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+            model = glm::rotate(model, currentTime * glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
             ourShader.setMatrixFloat("model", vector<glm::mat4>({model}), 4);
 
             // bind diffuse map
