@@ -42,10 +42,16 @@ bool firstMouse = true;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
+// light
+const unsigned int NR_LIGHTS = 32;
+vector<glm::mat4> lightCubeModels;
+std::vector<glm::vec3> lightPositions;
+std::vector<glm::vec3> lightColors;
+
 // sphere
-//将球横纵划分成50X50的网格
-const int Y_SEGMENTS = 50;
-const int X_SEGMENTS = 50;
+//将球横纵划分成 Y_SEGMENTS * X_SEGMENTS 的网格
+const int Y_SEGMENTS = 10;
+const int X_SEGMENTS = 10;
 std::vector<float> sphereVertices;
 std::vector<int> sphereIndices;
 vector<glm::mat4> sphereModels;
@@ -55,6 +61,8 @@ unsigned int sphereVBO = 0, sphereVAO = 0, sphereEBO = 0;
 //imGui Param
 bool g_bCaptureCursor = true;
 int g_radiusFactorImGui = 5;
+bool g_bShowSphereViewport = true;
+bool g_bShowLightVolumeViewport = true;
 
 int main()
 {
@@ -108,7 +116,7 @@ int main()
     // build and compile shaders
     // -------------------------
     Shader shaderGeometryPass(VERTEX_G_BUFFER_FILE, FRAGMENT_G_BUFFER_FILE);
-    Shader shaderLightingPass(VERTEX_DEFERRED_FILE, FRAGMENT_DEFERRED_FILE);
+    Shader shaderLightingPass(VERTEX_DEFERRED_LIGHT_VOLUME_FILE, FRAGMENT_DEFERRED_FILE);
     Shader shaderAmbientLightingPass(VERTEX_DEFERRED_FILE, FRAGMENT_DEFERRED_AMBIENT_FILE);
     Shader shaderLightBox(VERTEX_DEFERRED_LIGHT_FILE, FRAGMENT_DEFERRED_LIGHT_FILE);
     Shader shaderSphereDebug(VERTEX_SPHERE_FILE, FRAGMENT_SPHERE_DEBUG_FILE);
@@ -173,23 +181,14 @@ int main()
 
     // lighting info
     // -------------
-    const unsigned int NR_LIGHTS = 32;
-    const unsigned int regmentLightArrayLength = 500;
-    std::vector<glm::vec3> lightPositions;
-    std::vector<glm::vec3> lightColors;
     srand(13);
     const float constant = 1.0f; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)
     const float linear = 0.7f;
     const float quadratic = 1.8f;
-    int renderPointLightLoopNumber = NR_LIGHTS / regmentLightArrayLength;
-    if (NR_LIGHTS % regmentLightArrayLength != 0)
-        renderPointLightLoopNumber++;
-    float ambientStrength = 0.1 / renderPointLightLoopNumber;
     // update attenuation parameters and calculate radius
     shaderLightingPass.use();
     shaderLightingPass.setFloat("Linear", linear);
     shaderLightingPass.setFloat("Quadratic", quadratic);
-    shaderLightingPass.setFloat("ambientStrength", ambientStrength);
     for (unsigned int i = 0; i < NR_LIGHTS; i++)
     {
         // calculate slightly random offsets
@@ -202,21 +201,20 @@ int main()
         float gColor = static_cast<float>(((rand() % 100) / 200.0f) + 0.5); // between 0.5 and 1.)
         float bColor = static_cast<float>(((rand() % 100) / 200.0f) + 0.5); // between 0.5 and 1.)
         lightColors.push_back(glm::vec3(rColor, gColor, bColor));
-
-        shaderLightingPass.use();
-        shaderLightingPass.setVec3("lights[" + std::to_string(i) + "].Position", lightPositions[i]);
-        shaderLightingPass.setVec3("lights[" + std::to_string(i) + "].Color", lightColors[i]);
         // then calculate radius of light volume/sphere
         const float maxBrightness = std::fmaxf(std::fmaxf(lightColors[i].r, lightColors[i].g), lightColors[i].b);
         float radius = (-linear + std::sqrt(linear * linear - 4 * quadratic * (constant - (256.0f / radiusFactor) * maxBrightness))) / (2.0f * quadratic);
-        //shaderLightingPass.setFloat("lights[" + std::to_string(i) + "].Radius", radius);
         
         //shaderSphereDebug.use();
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, lightPositions[i]);
         model = glm::scale(model, glm::vec3(radius));
         sphereModels.push_back(model);
-        //shaderSphereDebug.setMat4("model", model);
+
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, lightPositions[i]);
+        model = glm::scale(model, glm::vec3(0.125f));
+        lightCubeModels.push_back(model);
     }
 
     // shader configuration
@@ -272,7 +270,6 @@ int main()
             {
                 const float maxBrightness = std::fmaxf(std::fmaxf(lightColors[i].r, lightColors[i].g), lightColors[i].b);
                 float radius = (-linear + std::sqrt(linear * linear - 4 * quadratic * (constant - (256.0f / radiusFactor) * maxBrightness))) / (2.0f * quadratic);
-                shaderLightingPass.setFloat("lights[" + std::to_string(i) + "].Radius", radius);
                 
                 //shaderSphereDebug.use();
                 glm::mat4 model = glm::mat4(1.0f);
@@ -280,16 +277,14 @@ int main()
                 model = glm::scale(model, glm::vec3(radius));
                 sphereModels[i] = model;
             }
-            if (0 != sphereVBO)
-            {
-                glBindBuffer(GL_ARRAY_BUFFER, sphereVBO);
-                glBufferSubData(GL_ARRAY_BUFFER, sphereVertices.size() * sizeof(float), sphereModels.size() * sizeof(glm::mat4), sphereModels.data());
-            }
         }
         
         // render
         // ------
         glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+        shaderLightingPass.use();
+        glm::vec2 gScreenSize = glm::vec2(SCR_WIDTH, SCR_HEIGHT);
+        shaderLightingPass.setVec2("gScreenSize", gScreenSize);
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -335,62 +330,59 @@ int main()
 
         glEnable(GL_STENCIL_TEST);
 
-        shaderSphere.use();
-        shaderSphere.setMat4("projection", projection);
-        shaderSphere.setMat4("view", view);
-        glClear(GL_STENCIL_BUFFER_BIT);        
-        glDisable(GL_CULL_FACE);
-        // We need the stencil test to be enabled but we want it
-        // to succeed always. Only the depth test matters.
-        glStencilFunc(GL_ALWAYS, 0, 0);
-        glStencilOpSeparate(GL_BACK, GL_KEEP, GL_INCR_WRAP, GL_KEEP);
-        glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_DECR_WRAP, GL_KEEP);
-        //depth setting
-        glEnable(GL_DEPTH_TEST);
-        glDepthMask(GL_FALSE);
-        renderSphere();
-        glEnable(GL_CULL_FACE);
-        glDepthMask(GL_TRUE);
-
-        shaderLightingPass.use();
-        shaderLightingPass.setVec3("viewPos", camera.Position);
-        glDisable(GL_DEPTH_TEST);
-        //渲染光球内部的光照
-        glStencilFunc(GL_NOTEQUAL, 0, 0xFF);
-        glStencilOpSeparate(GL_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
-        glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_KEEP);
-        glEnable(GL_BLEND);
-        glBlendEquation(GL_FUNC_ADD);
-        glBlendFunc(GL_ONE, GL_ONE);
-        for (size_t loopIndex = 0; loopIndex < renderPointLightLoopNumber; loopIndex++)
+        for (unsigned int i = 0; i < NR_LIGHTS; i++)
         {
-            unsigned int currentLightNumber = regmentLightArrayLength;
-            if (loopIndex + 1 == renderPointLightLoopNumber)
-            {
-                currentLightNumber = NR_LIGHTS % regmentLightArrayLength;
-                if (0 == currentLightNumber)
-                    currentLightNumber = regmentLightArrayLength;
-                
-            }
-            shaderLightingPass.setInt("currentLightNumber", currentLightNumber);
-            for (unsigned int i = 0; i < currentLightNumber; i++)
-            {
-                shaderLightingPass.setVec3("lights[" + std::to_string(i) + "].Position", lightPositions[loopIndex * regmentLightArrayLength + i]);
-                shaderLightingPass.setVec3("lights[" + std::to_string(i) + "].Color", lightColors[loopIndex * regmentLightArrayLength + i]);
-            }
-            renderQuad();
+            shaderSphere.use();
+            shaderSphere.setMat4("projection", projection);
+            shaderSphere.setMat4("view", view);
+            shaderSphere.setMat4("model", sphereModels[i]);
+            glClear(GL_STENCIL_BUFFER_BIT);        
+            glDisable(GL_CULL_FACE);
+            // We need the stencil test to be enabled but we want it
+            // to succeed always. Only the depth test matters.
+            glStencilFunc(GL_ALWAYS, 0, 0);
+            glStencilOpSeparate(GL_BACK, GL_KEEP, GL_INCR_WRAP, GL_KEEP);
+            glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_DECR_WRAP, GL_KEEP);
+            //depth setting
+            glEnable(GL_DEPTH_TEST);
+            glDepthMask(GL_FALSE);
+            renderSphere();
+            glEnable(GL_CULL_FACE);
+            glCullFace(GL_FRONT);
+            glDepthMask(GL_TRUE);
+
+            shaderLightingPass.use();
+            shaderLightingPass.setVec3("viewPos", camera.Position);
+            shaderLightingPass.setMat4("projection", projection);
+            shaderLightingPass.setMat4("view", view);
+            shaderLightingPass.setMat4("model", sphereModels[i]);
+            shaderLightingPass.setVec3("lightPos", lightPositions[i]);
+            shaderLightingPass.setVec3("Color", lightColors[i]);
+            glDisable(GL_DEPTH_TEST);
+            //渲染光球内部的光照
+            glStencilFunc(GL_NOTEQUAL, 0, 0xFF);
+            glStencilOpSeparate(GL_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
+            glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_KEEP);
+            glEnable(GL_BLEND);
+            glBlendEquation(GL_FUNC_ADD);
+            glBlendFunc(GL_ONE, GL_ONE);
+            renderSphere();
+            glCullFace(GL_BACK);
         }
-        glDisable(GL_BLEND);
+        glDisable(GL_STENCIL_TEST);
         //可视化debug：渲染光球内部
-        glViewport(0, SCR_HEIGHT, SCR_WIDTH, SCR_HEIGHT);
-        glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT, 0, SCR_HEIGHT, SCR_WIDTH, SCR_HEIGHT * 2, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+        if (g_bShowLightVolumeViewport)
+        {
+            glViewport(0, SCR_HEIGHT, SCR_WIDTH, SCR_HEIGHT);
+            glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT, 0, SCR_HEIGHT, SCR_WIDTH, SCR_HEIGHT * 2, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+        }
         //渲染光球外部的光照
         glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
         shaderAmbientLightingPass.use();
-        glStencilFunc(GL_EQUAL, 0, 0xFF);
         renderQuad();
+        glDisable(GL_BLEND);
 
-        glDisable(GL_STENCIL_TEST);
+        
 
         // 3. render lights on top of scene
         // --------------------------------
@@ -398,25 +390,24 @@ int main()
         shaderLightBox.use();
         shaderLightBox.setMat4("projection", projection);
         shaderLightBox.setMat4("view", view);
-        for (unsigned int i = 0; i < lightPositions.size(); i++)
-        {
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, lightPositions[i]);
-            model = glm::scale(model, glm::vec3(0.125f));
-            shaderLightBox.setMat4("model", model);
-            shaderLightBox.setVec3("lightColor", lightColors[i]);
-            renderCube();
-        }
+        renderCube();
 
         // visual debug
         //光球debug
-        glViewport(SCR_WIDTH, 0, SCR_WIDTH, SCR_HEIGHT);
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        shaderSphereDebug.use();
-        shaderSphereDebug.setMat4("projection", projection);
-        shaderSphereDebug.setMat4("view", view);
-        renderSphere();
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        if (g_bShowSphereViewport)
+        {
+            glViewport(SCR_WIDTH, 0, SCR_WIDTH, SCR_HEIGHT);
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            for (unsigned int i = 0; i < NR_LIGHTS; i++)
+            {
+                shaderSphereDebug.use();
+                shaderSphereDebug.setMat4("projection", projection);
+                shaderSphereDebug.setMat4("view", view);
+                shaderSphereDebug.setMat4("model", sphereModels[i]);
+                renderSphere();
+            }
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        }
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -428,6 +419,8 @@ int main()
         ImGui::Text("Current cursor mode: %d", g_bCaptureCursor ? 2 : 1);
         ImGui::SliderInt("/ 256 , Radius Factor", &g_radiusFactorImGui, 1, 256);
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+        ImGui::Checkbox("Show sphere viewport", &g_bShowSphereViewport);
+        ImGui::Checkbox("Show light volume render viewport", &g_bShowLightVolumeViewport);
 
         ImGui::End();
         ImGui::Render();
@@ -450,6 +443,7 @@ int main()
 // -------------------------------------------------
 unsigned int cubeVAO = 0;
 unsigned int cubeVBO = 0;
+unsigned int cubeVBO_Instanced = 0;
 void renderCube()
 {
     // initialize (if necessary)
@@ -513,11 +507,35 @@ void renderCube()
         glEnableVertexAttribArray(2);
         glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
         glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+        glGenBuffers(1, &cubeVBO_Instanced);
+        glBindBuffer(GL_ARRAY_BUFFER, cubeVBO_Instanced);
+        glBufferData(GL_ARRAY_BUFFER, NR_LIGHTS * sizeof(glm::vec3) + NR_LIGHTS * sizeof(glm::mat4), NULL, GL_STATIC_DRAW);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, NR_LIGHTS * sizeof(glm::vec3), lightColors.data());
+        glBufferSubData(GL_ARRAY_BUFFER, NR_LIGHTS * sizeof(glm::vec3), NR_LIGHTS * sizeof(glm::mat4), lightCubeModels.data());
+        
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+        // set attribute pointers for matrix (4 times vec4)
+        glEnableVertexAttribArray(4);
+        glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(NR_LIGHTS * sizeof(glm::vec3)));
+        glEnableVertexAttribArray(5);
+        glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(NR_LIGHTS * sizeof(glm::vec3) + sizeof(glm::vec4)));
+        glEnableVertexAttribArray(6);
+        glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(NR_LIGHTS * sizeof(glm::vec3) + 2 * sizeof(glm::vec4)));
+        glEnableVertexAttribArray(7);
+        glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(NR_LIGHTS * sizeof(glm::vec3) + 3 * sizeof(glm::vec4)));
+
+        glVertexAttribDivisor(3, 1);
+        glVertexAttribDivisor(4, 1);
+        glVertexAttribDivisor(5, 1);
+        glVertexAttribDivisor(6, 1);
+        glVertexAttribDivisor(7, 1);
         glBindVertexArray(0);
     }
     // render Cube
     glBindVertexArray(cubeVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+    glDrawArraysInstanced(GL_TRIANGLES, 0, 36, NR_LIGHTS);
     glBindVertexArray(0);
 }
 
@@ -606,26 +624,10 @@ void renderSphere()
         glBindBuffer(GL_ARRAY_BUFFER, sphereVBO);
         // 将顶点数据绑定至当前默认的缓冲中
         unsigned int vertexsSize = sphereVertices.size() * sizeof(float);
-        glBufferData(GL_ARRAY_BUFFER, vertexsSize + sphereModels.size() * sizeof(glm::mat4), NULL/*&sphereVertices[0]*/, GL_STATIC_DRAW);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, vertexsSize, sphereVertices.data());
-        glBufferSubData(GL_ARRAY_BUFFER, vertexsSize, sphereModels.size() * sizeof(glm::mat4), sphereModels.data());
+        glBufferData(GL_ARRAY_BUFFER, vertexsSize, &sphereVertices[0], GL_STATIC_DRAW);
         // 设置顶点属性指针
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-        // set attribute pointers for matrix (4 times vec4)
-        glEnableVertexAttribArray(3);
-        glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(vertexsSize));
-        glEnableVertexAttribArray(4);
-        glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(vertexsSize + sizeof(glm::vec4)));
-        glEnableVertexAttribArray(5);
-        glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(vertexsSize + 2 * sizeof(glm::vec4)));
-        glEnableVertexAttribArray(6);
-        glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(vertexsSize + 3 * sizeof(glm::vec4)));
-
-        glVertexAttribDivisor(3, 1);
-        glVertexAttribDivisor(4, 1);
-        glVertexAttribDivisor(5, 1);
-        glVertexAttribDivisor(6, 1);
         //EBO
         glGenBuffers(1, &sphereEBO);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, sphereEBO);
@@ -633,7 +635,7 @@ void renderSphere()
         
     }
     glBindVertexArray(sphereVAO);
-    glDrawElementsInstanced(GL_TRIANGLES, X_SEGMENTS*Y_SEGMENTS * 6, GL_UNSIGNED_INT, 0, sphereModels.size());
+    glDrawElements(GL_TRIANGLES, X_SEGMENTS*Y_SEGMENTS * 6, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 }
 

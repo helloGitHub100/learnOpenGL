@@ -61,6 +61,8 @@ unsigned int sphereVBO = 0, sphereVAO = 0, sphereEBO = 0;
 //imGui Param
 bool g_bCaptureCursor = true;
 int g_radiusFactorImGui = 5;
+bool g_bShowSphereViewport = true;
+bool g_bShowLightVolumeViewport = true;
 
 int main()
 {
@@ -370,8 +372,11 @@ int main()
         glCullFace(GL_BACK);
         glDisable(GL_STENCIL_TEST);
         //可视化debug：渲染光球内部
-        glViewport(0, SCR_HEIGHT, SCR_WIDTH, SCR_HEIGHT);
-        glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT, 0, SCR_HEIGHT, SCR_WIDTH, SCR_HEIGHT * 2, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+        if (g_bShowLightVolumeViewport)
+        {
+            glViewport(0, SCR_HEIGHT, SCR_WIDTH, SCR_HEIGHT);
+            glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT, 0, SCR_HEIGHT, SCR_WIDTH, SCR_HEIGHT * 2, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+        }
         //渲染光球外部的光照
         glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
         shaderAmbientLightingPass.use();
@@ -390,13 +395,16 @@ int main()
 
         // visual debug
         //光球debug
-        glViewport(SCR_WIDTH, 0, SCR_WIDTH, SCR_HEIGHT);
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        shaderSphereDebug.use();
-        shaderSphereDebug.setMat4("projection", projection);
-        shaderSphereDebug.setMat4("view", view);
-        renderSphere();
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        if (g_bShowSphereViewport)
+        {
+            glViewport(SCR_WIDTH, 0, SCR_WIDTH, SCR_HEIGHT);
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            shaderSphereDebug.use();
+            shaderSphereDebug.setMat4("projection", projection);
+            shaderSphereDebug.setMat4("view", view);
+            renderSphere();
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        }
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -408,6 +416,8 @@ int main()
         ImGui::Text("Current cursor mode: %d", g_bCaptureCursor ? 2 : 1);
         ImGui::SliderInt("/ 256 , Radius Factor", &g_radiusFactorImGui, 1, 256);
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+        ImGui::Checkbox("Show sphere viewport", &g_bShowSphereViewport);
+        ImGui::Checkbox("Show light volume render viewport", &g_bShowLightVolumeViewport);
 
         ImGui::End();
         ImGui::Render();

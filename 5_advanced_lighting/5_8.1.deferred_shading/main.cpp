@@ -29,6 +29,12 @@ float lastX = (float)SCR_WIDTH / 2.0;
 float lastY = (float)SCR_HEIGHT / 2.0;
 bool firstMouse = true;
 
+// light
+const unsigned int NR_LIGHTS = 32;
+vector<glm::mat4> lightCubeModels;
+std::vector<glm::vec3> lightPositions;
+std::vector<glm::vec3> lightColors;
+
 // timing
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
@@ -77,6 +83,9 @@ int main()
     // configure global opengl state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
+    //开启面剔除(只需要展示一个面，否则会有重合)
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
 
     // build and compile shaders
     // -------------------------
@@ -142,10 +151,7 @@ int main()
 
     // lighting info
     // -------------
-    const unsigned int NR_LIGHTS = 32;
     const unsigned int regmentLightArrayLength = 500;
-    std::vector<glm::vec3> lightPositions;
-    std::vector<glm::vec3> lightColors;
     srand(13);
     const float constant = 1.0f; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)
     const float linear = 0.7f;
@@ -175,6 +181,10 @@ int main()
         shaderLightingPass.use();
         shaderLightingPass.setVec3("lights[" + std::to_string(i) + "].Position", lightPositions[i]);
         shaderLightingPass.setVec3("lights[" + std::to_string(i) + "].Color", lightColors[i]);
+        glm::mat4  model = glm::mat4(1.0f);
+        model = glm::translate(model, lightPositions[i]);
+        model = glm::scale(model, glm::vec3(0.125f));
+        lightCubeModels.push_back(model);
     }
 
     // shader configuration
@@ -289,16 +299,7 @@ int main()
         shaderLightBox.use();
         shaderLightBox.setMat4("projection", projection);
         shaderLightBox.setMat4("view", view);
-        for (unsigned int i = 0; i < lightPositions.size(); i++)
-        {
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, lightPositions[i]);
-            model = glm::scale(model, glm::vec3(0.125f));
-            shaderLightBox.setMat4("model", model);
-            shaderLightBox.setVec3("lightColor", lightColors[i]);
-            renderCube();
-        }
-
+        renderCube();
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
@@ -314,6 +315,7 @@ int main()
 // -------------------------------------------------
 unsigned int cubeVAO = 0;
 unsigned int cubeVBO = 0;
+unsigned int cubeVBO_Instanced = 0;
 void renderCube()
 {
     // initialize (if necessary)
@@ -377,11 +379,35 @@ void renderCube()
         glEnableVertexAttribArray(2);
         glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
         glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+        glGenBuffers(1, &cubeVBO_Instanced);
+        glBindBuffer(GL_ARRAY_BUFFER, cubeVBO_Instanced);
+        glBufferData(GL_ARRAY_BUFFER, NR_LIGHTS * sizeof(glm::vec3) + NR_LIGHTS * sizeof(glm::mat4), NULL, GL_STATIC_DRAW);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, NR_LIGHTS * sizeof(glm::vec3), lightColors.data());
+        glBufferSubData(GL_ARRAY_BUFFER, NR_LIGHTS * sizeof(glm::vec3), NR_LIGHTS * sizeof(glm::mat4), lightCubeModels.data());
+        
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+        // set attribute pointers for matrix (4 times vec4)
+        glEnableVertexAttribArray(4);
+        glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(NR_LIGHTS * sizeof(glm::vec3)));
+        glEnableVertexAttribArray(5);
+        glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(NR_LIGHTS * sizeof(glm::vec3) + sizeof(glm::vec4)));
+        glEnableVertexAttribArray(6);
+        glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(NR_LIGHTS * sizeof(glm::vec3) + 2 * sizeof(glm::vec4)));
+        glEnableVertexAttribArray(7);
+        glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(NR_LIGHTS * sizeof(glm::vec3) + 3 * sizeof(glm::vec4)));
+
+        glVertexAttribDivisor(3, 1);
+        glVertexAttribDivisor(4, 1);
+        glVertexAttribDivisor(5, 1);
+        glVertexAttribDivisor(6, 1);
+        glVertexAttribDivisor(7, 1);
         glBindVertexArray(0);
     }
     // render Cube
     glBindVertexArray(cubeVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+    glDrawArraysInstanced(GL_TRIANGLES, 0, 36, NR_LIGHTS);
     glBindVertexArray(0);
 }
 
