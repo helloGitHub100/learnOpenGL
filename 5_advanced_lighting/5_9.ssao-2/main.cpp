@@ -44,7 +44,7 @@ float far_plane = 150.0f;
 // lighting info
 vector<glm::vec3> lightsPos;// = glm::vec3(2.0, 4.0, -2.0);
 glm::vec3 lightColor = glm::vec3(0.069, 0.069, 0.069);
-float lightColorArray[3];
+float lightColorArray[3] = {0.0196, 0.01568627, 0.0196};
 
 // timing
 float deltaTime = 0.0f;
@@ -69,17 +69,17 @@ int g_kernelSize = 64;
 int g_kernelSizeCurrent = 64;
 float g_radius = 0.5f;
 float g_bias = 0.025f;
-float linear    = 0.015f;
-float quadratic = 0.015f;
+float linear    = 0.010f;
+float quadratic = 0.005f;
 bool g_showNormal = false;
 bool g_lightSetting = false;
 float g_normalOffsetScale = 1.0f;
-float g_ambientRatio = 0.3f;
+float g_ambientRatio = 0.761f;
 // person param
-float g_personPos[3] = {0.0f, -10.053f, 0.0f};
+float g_personPos[3] = {19.753f, -10.053f, -2.411f};
 float g_personRotateVec[3] = {0.0f, 1.0f, 0.0f};
-float g_personRotateAngle = 90.0f;
-float g_personScale = 1.0f;
+float g_personRotateAngle = -42.631f;
+float g_personScale = 0.693f;
 
 int main()
 {
@@ -247,9 +247,6 @@ int main()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-    lightColorArray[0] = lightColor.r;
-    lightColorArray[1] = lightColor.g;
-    lightColorArray[2] = lightColor.b;
     lightsPos.push_back(glm::vec3(-7.045096, -4.860858, -13.793019));
     lightsPos.push_back(glm::vec3(-5.553995, -4.988711, -15.074287));
     lightsPos.push_back(glm::vec3(-6.762054, -4.990257, -16.520481));
@@ -436,15 +433,6 @@ int main()
                 ssaoKernel.push_back(sample);
             }
         }
-        if (lightColorArray[0] != lightColor.r ||
-            lightColorArray[1] != lightColor.g ||
-            lightColorArray[2] != lightColor.b)
-        {
-            lightColor.r = lightColorArray[0];
-            lightColor.g = lightColorArray[1];
-            lightColor.b = lightColorArray[2];
-        }
-        
 
         // render
         // ------
@@ -543,7 +531,7 @@ int main()
             glm::vec3 lightPosView = glm::vec3(camera.GetViewMatrix() * glm::vec4(lightsPos[i], 1.0));
             shaderLightingPass.setVec3("lights[" + std::to_string(i) + "].Position", lightPosView);
         }
-        shaderLightingPass.setVec3("lightColor", lightColor);
+        shaderLightingPass.setVec3("lightColor", glm::vec3(lightColorArray[0], lightColorArray[1], lightColorArray[2]));
         // Update attenuation parameters
         shaderLightingPass.setFloat("Linear", linear);
         shaderLightingPass.setFloat("Quadratic", quadratic);
@@ -573,7 +561,7 @@ int main()
                 model = glm::translate(model, lightsPos[i]);
                 model = glm::scale(model, glm::vec3(0.125f));
                 shaderLightBox.setMat4("model", model);
-                shaderLightBox.setVec3("lightColor", lightColor);
+                shaderLightBox.setVec3("lightColor", glm::vec3(lightColorArray[0], lightColorArray[1], lightColorArray[2]));
                 shaderLightBox.setFloat("textureScale", g_textureScale);
                 renderCube();
             }
@@ -594,6 +582,12 @@ int main()
             normalShader.setMat4("model", model);
             normalShader.setFloat("textureScale", g_textureScale);
             room.Draw(normalShader.ID);
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(g_personPos[0], g_personPos[1], g_personPos[2]));
+            model = glm::rotate(model, glm::radians(g_personRotateAngle), glm::vec3(g_personRotateVec[0], g_personRotateVec[1], g_personRotateVec[2]));
+            model = glm::scale(model, glm::vec3(g_personScale));
+            normalShader.setMat4("model", model);
+            person.Draw(normalShader.ID);
         }
 
         ImGui_ImplOpenGL3_NewFrame();
