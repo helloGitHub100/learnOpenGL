@@ -91,6 +91,7 @@ int main()
 
     // load PBR material textures
     // --------------------------
+    //stbi_set_flip_vertically_on_load(true);
     unsigned int albedo    = loadTexture(RESOURCES_DIR"/textures/pbr/columned-lava-rock-bl/columned-lava-rock_albedo.png");
     unsigned int normal    = loadTexture(RESOURCES_DIR"/textures/pbr/columned-lava-rock-bl/columned-lava-rock_normal-ogl.png");
     unsigned int metallic  = loadTexture(RESOURCES_DIR"/textures/pbr/columned-lava-rock-bl/columned-lava-rock_metallic.png");
