@@ -20,7 +20,7 @@ void main()
     vec3 posNormal   = normalize(aPos);
     float height = texture(heightMap, aTexCoords).r;
     vec3 aPosOffset = aPos + posNormal * height * heightScale;
-    mat3 normalMatrix = mat3(transpose(inverse(view * model)));
+    mat3 normalMatrix = transpose(inverse(mat3(view * model)));
     vs_out.normal = vec3(vec4(normalMatrix * aNormal, 0.0));
     gl_Position = view * model * vec4(aPosOffset, 1.0); 
 }

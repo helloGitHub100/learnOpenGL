@@ -383,7 +383,7 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 void computeTangents(std::vector<glm::vec3>& vertices, std::vector<glm::vec2>& uv, std::vector<glm::vec3>& normals
 , const std::vector<unsigned int>& indices, std::vector<glm::vec3>& tangents, std::vector<glm::vec3>& bitangents)
 {
-    for (unsigned int i = 0; i + 2 < indices.size(); i += 3) {
+    for (unsigned int i = 0; i + 2 < indices.size(); i++) {
         unsigned int i0 = indices[i];
         unsigned int i1 = indices[i + 1];
         unsigned int i2 = indices[i + 2];
@@ -424,6 +424,8 @@ void computeTangents(std::vector<glm::vec3>& vertices, std::vector<glm::vec2>& u
     {
         glm::vec3 normal(normals[i]);
         glm::vec3 tangent(tangents[i]);
+        if (tangent.x == 0.0f && tangent.y == 0.0f && tangent.z == 0.0f)
+            std::cout << "The tangent is 0.0, index = " << i << endl;
 
         //if (fabs(glm::dot(normal, tangent)) > 0.01)
         //    std::cout << "glm::dot(normal, tangent) = " << glm::dot(normal, tangent) << endl;
@@ -435,6 +437,9 @@ void computeTangents(std::vector<glm::vec3>& vertices, std::vector<glm::vec2>& u
         bitangents.push_back(bitangent);
 
         tangents[i] = tangent;
+        if (std::isnan(tangent.x) || std::isnan(tangent.y) || std::isnan(tangent.z))
+            std::cout << "The tangent is NaN, index = " << i << endl;
+        
     }
 }
 
@@ -482,6 +487,7 @@ void renderSphere()
                 //glm::vec3 tangent = glm::vec3(-radius * sin(phi), 0.0f, radius * cos(phi));
                 //glm::vec3 tangent = glm::normalize(glm::vec3(-radius * cos(theta) * sin(phi), radius * cos(theta) * cos(phi), 0.0f));
                 //std::cout << "glm::dot(normal, tangent) = " << glm::dot(normal, tangent) << endl;
+                //tangents.push_back(tangent);
                 tangents.push_back(glm::vec3(0.0f));
                 //glm::vec3 bitangent = glm::cross(normal, tangent);
                 //glm::vec3 bitangent = glm::vec3(-radius * sin(theta) * cos(phi), -radius * sin(theta) * sin(phi), radius * cos(theta));
@@ -490,18 +496,18 @@ void renderSphere()
             }
         }
 
-        bool oddRow = false;
+        //bool oddRow = false;
         for (unsigned int y = 0; y < Y_SEGMENTS; ++y)
         {
-            if (!oddRow) // even rows: y == 0, y == 2; and so on
-            {
+            //if (!oddRow) // even rows: y == 0, y == 2; and so on//计算切线需要把该判断删掉，否则有些切线会计算成0
+            //{
                 for (unsigned int x = 0; x <= X_SEGMENTS; ++x)
                 {
                     indices.push_back(y * (X_SEGMENTS + 1) + x);
                     indices.push_back((y + 1) * (X_SEGMENTS + 1) + x);
                 }
-            }
-            else
+            //}
+            /*else
             {
                 for (int x = X_SEGMENTS; x >= 0; --x)
                 {
@@ -509,7 +515,7 @@ void renderSphere()
                     indices.push_back(y * (X_SEGMENTS + 1) + x);
                 }
             }
-            oddRow = !oddRow;
+            oddRow = !oddRow;*/
         }
         indexCount = static_cast<unsigned int>(indices.size());
 
