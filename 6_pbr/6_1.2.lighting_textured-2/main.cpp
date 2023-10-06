@@ -21,12 +21,13 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow *window);
 unsigned int loadTexture(const char *path);
+void computeTangents(std::vector<glm::vec3>& vertices, std::vector<glm::vec2>& uv, std::vector<glm::vec3>& normals
+, const std::vector<unsigned int>& indices, std::vector<glm::vec3>& tangents, std::vector<glm::vec3>& bitangents);
 void renderSphere();
-void renderPlane();
 
 // settings
-const unsigned int SCR_WIDTH = 1280;
-const unsigned int SCR_HEIGHT = 720;
+unsigned int SCR_WIDTH = 1280;
+unsigned int SCR_HEIGHT = 720;
 unsigned int ImGui_Width = 500;
 float heightScale = 0.1f;
 
@@ -42,6 +43,10 @@ float lastFrame = 0.0f;
 
 //imGui Param
 bool g_bCaptureCursor = true;
+bool g_showNormal = false;
+bool g_showVertexNormal = false;
+bool g_showTextureNormal = true;
+bool g_bTBN = true;
 
 int main()
 {
@@ -85,10 +90,13 @@ int main()
     // configure global opengl state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
+    //glEnable(GL_CULL_FACE);
 
     // build and compile shaders
     // -------------------------
     Shader shader(VERTEX_FILE, FRAGMENT_FILE);
+    Shader normalShader(VERTEX_NORMAL_FILE, FRAGMENT_NORMAL_FILE, GEOMETRY_FILE);
+    Shader normalTextureShader(VERTEX_NORMAL_TEXTURE_FILE, FRAGMENT_NORMAL_FILE, GEOMETRY_FILE);
 
     shader.use();
     shader.setInt("albedoMap", 0);
@@ -96,7 +104,16 @@ int main()
     shader.setInt("metallicMap", 2);
     shader.setInt("roughnessMap", 3);
     shader.setInt("aoMap", 4);
-    shader.setInt("depthMap", 5);
+    shader.setInt("heightMap", 5);
+
+    normalShader.use();
+    normalShader.setInt("heightMap", 5);
+    normalShader.setVec4("normalColor", glm::vec4(1.0, 1.0, 0.0, 1.0));
+
+    normalTextureShader.use();
+    normalTextureShader.setInt("normalMap", 1);
+    normalTextureShader.setInt("heightMap", 5);
+    normalTextureShader.setVec4("normalColor", glm::vec4(0.0, 0.0, 1.0, 1.0));
 
     // load PBR material textures
     // --------------------------
@@ -118,7 +135,7 @@ int main()
     };
     int nrRows = 7;
     int nrColumns = 7;
-    float spacing = 2.5;
+    float spacing = 3.0;
 
     // initialize static shader uniforms before rendering
     // --------------------------------------------------
@@ -151,6 +168,7 @@ int main()
 
         // render
         // ------
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -189,8 +207,7 @@ int main()
                 ));
                 shader.setMat4("model", model);
                 shader.setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
-                //renderSphere();
-                renderPlane();
+                renderSphere();
             }
         }
 
@@ -212,6 +229,46 @@ int main()
             renderSphere();
         }
 
+        // 法向量可视化
+        if (g_showNormal && (g_showVertexNormal || g_showTextureNormal))
+        {
+            normalShader.use();
+            normalShader.setMat4("projection", projection);
+            normalShader.setMat4("view", view);
+            normalShader.setFloat("heightScale", heightScale); // adjust with Q and E keys
+
+            normalTextureShader.use();
+            normalTextureShader.setMat4("projection", projection);
+            normalTextureShader.setMat4("view", view);
+            normalTextureShader.setFloat("heightScale", heightScale); // adjust with Q and E keys
+            for (int row = 0; row < nrRows; ++row)
+            {
+                for (int col = 0; col < nrColumns; ++col)
+                {
+                    model = glm::mat4(1.0f);
+                    model = glm::translate(model, glm::vec3(
+                        (float)(col - (nrColumns / 2)) * spacing,
+                        (float)(row - (nrRows / 2)) * spacing,
+                        0.0f
+                    ));
+                    if (g_showVertexNormal)
+                    {
+                        normalShader.use();
+                        normalShader.setMat4("model", model);
+                        renderSphere();
+                    }
+                    if (g_showTextureNormal)
+                    {
+                        glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+                        normalTextureShader.use();
+                        normalTextureShader.setMat4("model", model);
+                        normalTextureShader.setBool("bTBN", g_bTBN);
+                        renderSphere();
+                    }
+                }
+            }
+        }
+
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
@@ -221,6 +278,14 @@ int main()
         ImGui::Text("Press \"2\" to hide cursor and finishe setting mode.");
         ImGui::Text("Current cursor mode: %d", g_bCaptureCursor ? 2 : 1);
         ImGui::SliderFloat("height map scale", &heightScale, 0.0f, 1.0f);
+        ImGui::Checkbox("Show normal for debugging", &g_showNormal);
+        if (g_showNormal)
+        {
+            ImGui::Checkbox("Show vertex normal", &g_showVertexNormal);
+            ImGui::Checkbox("Show texture normal", &g_showTextureNormal);
+            if (g_showTextureNormal)
+                ImGui::Checkbox("TBN Matrix", &g_bTBN);
+        }
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 
         ImGui::End();
@@ -278,7 +343,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     // make sure the viewport matches the new window dimensions; note that width and 
     // height will be significantly larger than specified on retina displays.
-    glViewport(0, 0, width, height);
+    SCR_WIDTH = width - ImGui_Width;
+    SCR_HEIGHT = height;
 }
 
 
@@ -314,6 +380,64 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
     camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }
 
+void computeTangents(std::vector<glm::vec3>& vertices, std::vector<glm::vec2>& uv, std::vector<glm::vec3>& normals
+, const std::vector<unsigned int>& indices, std::vector<glm::vec3>& tangents, std::vector<glm::vec3>& bitangents)
+{
+    for (unsigned int i = 0; i + 2 < indices.size(); i += 3) {
+        unsigned int i0 = indices[i];
+        unsigned int i1 = indices[i + 1];
+        unsigned int i2 = indices[i + 2];
+
+        glm::vec3& v0 = vertices[i0];
+        glm::vec3& v1 = vertices[i1];
+        glm::vec3& v2 = vertices[i2];
+
+        glm::vec2& uv0 = uv[i0];
+        glm::vec2& uv1 = uv[i1];
+        glm::vec2& uv2 = uv[i2];
+
+        glm::vec3& t0 = tangents[i0];
+        glm::vec3& t1 = tangents[i1];
+        glm::vec3& t2 = tangents[i2];
+
+        glm::vec3 edge1(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z);
+        glm::vec3 edge2(v2.x - v0.x, v2.y - v0.y, v2.z - v0.z);
+
+        float deltaU1 = uv1.x - uv0.x;
+        float deltaV1 = uv1.y - uv0.y;
+        float deltaU2 = uv2.x - uv0.x;
+        float deltaV2 = uv2.y - uv0.y;
+
+        float f = 1.0f / (deltaU1 * deltaV2 - deltaU2 * deltaV1);
+
+        glm::vec3 tangent;
+        tangent.x = f * (deltaV2 * edge1.x - deltaV1 * edge2.x);
+        tangent.y = f * (deltaV2 * edge1.y - deltaV1 * edge2.y);
+        tangent.z = f * (deltaV2 * edge1.z - deltaV1 * edge2.z);
+
+        t0 += tangent;
+        t1 += tangent;
+        t2 += tangent;
+    }
+
+    for (unsigned int i = 0; i < vertices.size(); i++) 
+    {
+        glm::vec3 normal(normals[i]);
+        glm::vec3 tangent(tangents[i]);
+
+        //if (fabs(glm::dot(normal, tangent)) > 0.01)
+        //    std::cout << "glm::dot(normal, tangent) = " << glm::dot(normal, tangent) << endl;
+        // Gram-Schmidt orthogonalize
+        tangent = glm::normalize(tangent - glm::dot(normal, tangent) * normal);
+        //tangent = glm::normalize(tangent);
+
+        glm::vec3 bitangent = glm::cross(normal, tangent);
+        bitangents.push_back(bitangent);
+
+        tangents[i] = tangent;
+    }
+}
+
 // renders (and builds at first invocation) a sphere
 // -------------------------------------------------
 unsigned int sphereVAO = 0;
@@ -331,24 +455,38 @@ void renderSphere()
         std::vector<glm::vec3> positions;
         std::vector<glm::vec2> uv;
         std::vector<glm::vec3> normals;
+        std::vector<glm::vec3> tangents;
+        std::vector<glm::vec3> bitangents;
         std::vector<unsigned int> indices;
 
         const unsigned int X_SEGMENTS = 64;
         const unsigned int Y_SEGMENTS = 64;
         const float PI = 3.14159265359f;
+        float radius = 1.0;
         for (unsigned int x = 0; x <= X_SEGMENTS; ++x)
         {
             for (unsigned int y = 0; y <= Y_SEGMENTS; ++y)
             {
                 float xSegment = (float)x / (float)X_SEGMENTS;
                 float ySegment = (float)y / (float)Y_SEGMENTS;
-                float xPos = std::cos(xSegment * 2.0f * PI) * std::sin(ySegment * PI);
-                float yPos = std::cos(ySegment * PI);
-                float zPos = std::sin(xSegment * 2.0f * PI) * std::sin(ySegment * PI);
+                float phi = xSegment * 2.0f * PI;
+                float theta = ySegment * PI;
+                float xPos = radius * std::cos(phi) * std::sin(theta);
+                float yPos = radius * std::cos(theta);
+                float zPos = radius * std::sin(phi) * std::sin(theta);
 
                 positions.push_back(glm::vec3(xPos, yPos, zPos));
-                uv.push_back(glm::vec2(xSegment, ySegment));
-                normals.push_back(glm::vec3(xPos, yPos, zPos));
+                uv.push_back(glm::vec2(xSegment * 3, ySegment * 3));
+                glm::vec3 normal = glm::vec3(xPos, yPos, zPos);
+                normals.push_back(normal);
+                //glm::vec3 tangent = glm::vec3(-radius * sin(phi), 0.0f, radius * cos(phi));
+                //glm::vec3 tangent = glm::normalize(glm::vec3(-radius * cos(theta) * sin(phi), radius * cos(theta) * cos(phi), 0.0f));
+                //std::cout << "glm::dot(normal, tangent) = " << glm::dot(normal, tangent) << endl;
+                tangents.push_back(glm::vec3(0.0f));
+                //glm::vec3 bitangent = glm::cross(normal, tangent);
+                //glm::vec3 bitangent = glm::vec3(-radius * sin(theta) * cos(phi), -radius * sin(theta) * sin(phi), radius * cos(theta));
+                //std::cout << "glm::dot(bitangent, tangent) = " << glm::dot(bitangent, tangent) << endl;
+                //bitangents.push_back(bitangent);
             }
         }
 
@@ -375,6 +513,8 @@ void renderSphere()
         }
         indexCount = static_cast<unsigned int>(indices.size());
 
+        computeTangents(positions, uv, normals, indices, tangents, bitangents);
+
         std::vector<float> data;
         for (unsigned int i = 0; i < positions.size(); ++i)
         {
@@ -392,59 +532,39 @@ void renderSphere()
                 data.push_back(uv[i].x);
                 data.push_back(uv[i].y);
             }
+            if (tangents.size() > 0)
+            {
+                data.push_back(tangents[i].x);
+                data.push_back(tangents[i].y);
+                data.push_back(tangents[i].z);
+            }
+            if (bitangents.size() > 0)
+            {
+                data.push_back(bitangents[i].x);
+                data.push_back(bitangents[i].y);
+                data.push_back(bitangents[i].z);
+            }
         }
         glBindVertexArray(sphereVAO);
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(float), &data[0], GL_STATIC_DRAW);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
-        unsigned int stride = (3 + 2 + 3) * sizeof(float);
+        unsigned int stride = (3 + 2 + 3 + 3 + 3) * sizeof(float);
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
         glEnableVertexAttribArray(1);
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
         glEnableVertexAttribArray(2);
         glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)(6 * sizeof(float)));
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, stride, (void*)(8 * sizeof(float)));
+        glEnableVertexAttribArray(4);
+        glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, stride, (void*)(11 * sizeof(float)));
     }
 
     glBindVertexArray(sphereVAO);
     glDrawElements(GL_TRIANGLE_STRIP, indexCount, GL_UNSIGNED_INT, 0);
-}
-
-// renderPlane() renders a 1x1 XY quad in NDC
-// -----------------------------------------
-unsigned int planeVAO = 0;
-unsigned int planeVBO;
-void renderPlane()
-{
-    if (planeVAO == 0)
-    {
-        float planeVertices[] = {
-             // front face
-             // positions         // normals          // texcoords
-            -1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, // bottom-left
-             1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 0.0f, // bottom-right
-             1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f, // top-right
-             1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f, // top-right
-            -1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 1.0f, // top-left
-            -1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, // bottom-left
-        };
-        // setup plane VAO
-        glGenVertexArrays(1, &planeVAO);
-        glGenBuffers(1, &planeVBO);
-        glBindVertexArray(planeVAO);
-        glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), planeVertices, GL_STATIC_DRAW);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-        glEnableVertexAttribArray(2);
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    }
-    glBindVertexArray(planeVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-    glBindVertexArray(0);
 }
 
 // utility function for loading a 2D texture from file
