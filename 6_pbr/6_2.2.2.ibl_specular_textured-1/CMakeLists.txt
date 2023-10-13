@@ -7,7 +7,10 @@ add_compile_definitions(VERTEX_BACKGROUND_FILE=\"${CMAKE_CURRENT_SOURCE_DIR}/2.2
 add_compile_definitions(FRAGMENT_BACKGROUND_FILE=\"${CMAKE_CURRENT_SOURCE_DIR}/2.2.2.background.fs\")
 
 add_compile_definitions(VERTEX_PBR_FILE=\"${CMAKE_CURRENT_SOURCE_DIR}/2.2.2.pbr.vs\")
-add_compile_definitions(FRAGMENT_PBR_BACKGROUND_FILE=\"${CMAKE_CURRENT_SOURCE_DIR}/2.2.2.pbr.fs\")
+add_compile_definitions(FRAGMENT_PBR_FILE=\"${CMAKE_CURRENT_SOURCE_DIR}/2.2.2.pbr.fs\")
+
+add_compile_definitions(VERTEX_SPHERE_TEXCOORDS_FILE=\"${CMAKE_CURRENT_SOURCE_DIR}/sphereTexcoords.vs\")
+add_compile_definitions(FRAGMENT_SPHERE_TEXCOORDS_FILE=\"${CMAKE_CURRENT_SOURCE_DIR}/sphereTexcoords.fs\")
 
 add_compile_definitions(VERTEX_BRDF_FILE=\"${CMAKE_CURRENT_SOURCE_DIR}/2.2.2.brdf.vs\")
 add_compile_definitions(FRAGMENT_BRDF_FILE=\"${CMAKE_CURRENT_SOURCE_DIR}/2.2.2.brdf.fs\")

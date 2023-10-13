@@ -18,6 +18,10 @@
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+unsigned int sphereTexCoordsFBO, sphereTexCoordsRBO;
+unsigned int sphereTexCoordsMap;
+std::vector<GLfloat> g_sphereTexCoordDatas;
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow *window);
 unsigned int loadTexture(const char *path);
@@ -92,6 +96,7 @@ int main()
     }
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
     glfwSetScrollCallback(window, scroll_callback);
 
     // tell GLFW to capture our mouse
@@ -115,7 +120,7 @@ int main()
 
     // build and compile shaders
     // -------------------------
-    Shader pbrShader(VERTEX_PBR_FILE, FRAGMENT_PBR_BACKGROUND_FILE);
+    Shader pbrShader(VERTEX_PBR_FILE, FRAGMENT_PBR_FILE);
     Shader equirectangularToCubemapShader(VERTEX_CUBE_FILE, FRAGMENT_EQUIRE_CUBE_FILE);
     Shader irradianceShader(VERTEX_CUBE_FILE, FRAGMENT_IRRADIANCE_CUBE_FILE);
     Shader prefilterShader(VERTEX_CUBE_FILE, FRAGMENT_PREFILTER_BACKGROUND_FILE);
@@ -124,6 +129,7 @@ int main()
     Shader importanceSampleVisualShader(VERTEX_IMPORTANCE_VISUAL_FILE, FRAGMENT_IMPORTANCE_VISUAL_FILE, GEOMETRY_IMPORTANCE_VISUAL_FILE);
     Shader importanceMapShader(VERTEX_IMPORTANCE_LINE_FILE, FRAGMENT_IMPORTANCE_LINE_FILE);
     Shader importanceLineSampleShader(VERTEX_IMPORTANCE_LINE_FILE, FRAGMENT_IMPORTANCE_LINE_SAMPLE_FILE);
+    Shader sphereTexcoordsShader(VERTEX_SPHERE_TEXCOORDS_FILE, FRAGMENT_SPHERE_TEXCOORDS_FILE);
 
     pbrShader.use();
     pbrShader.setInt("irradianceMap", 0);
@@ -398,6 +404,7 @@ int main()
         std::cout << "captureFBO Framebuffer not complete!" << std::endl;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+    // 新增一个帧缓冲，用于渲染重要性采样纹理贴图
     unsigned int importanceSampleFBO;
     glGenFramebuffers(1, &importanceSampleFBO);
     // importance sample texture
@@ -414,6 +421,29 @@ int main()
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, importanceSampleMap, 0);
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "importanceSample Framebuffer not complete!" << std::endl;
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // 新增一个帧缓冲，用于渲染球体纹理坐标(x, y)纹理贴图
+    glGenFramebuffers(1, &sphereTexCoordsFBO);
+    glGenRenderbuffers(1, &sphereTexCoordsRBO);//需要用到深度测试
+
+    glBindFramebuffer(GL_FRAMEBUFFER, sphereTexCoordsFBO);
+    glBindRenderbuffer(GL_RENDERBUFFER, sphereTexCoordsRBO);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, SCR_WIDTH, SCR_HEIGHT);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, sphereTexCoordsRBO);
+    // sphereTexCoords texture
+    glGenTextures(1, &sphereTexCoordsMap);
+
+    glBindTexture(GL_TEXTURE_2D, sphereTexCoordsMap);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_FLOAT, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glBindFramebuffer(GL_FRAMEBUFFER, sphereTexCoordsFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, sphereTexCoordsMap, 0);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "sphereTexCoords Framebuffer not complete!" << std::endl;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     // initialize static shader uniforms before rendering
@@ -501,6 +531,9 @@ int main()
         importanceSampleVisualShader.use();
         importanceSampleVisualShader.setMat4("projection", projection);
         importanceSampleVisualShader.setMat4("view", view);
+        sphereTexcoordsShader.use();
+        sphereTexcoordsShader.setMat4("projection", projection);
+        sphereTexcoordsShader.setMat4("view", view);
         pbrShader.use();
 
         // bind pre-computed IBL data
@@ -533,7 +566,7 @@ int main()
 
         glBindFramebuffer(GL_FRAMEBUFFER, importanceSampleFBO);
             glViewport(0, 0, 1024, 1);
-            //glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             importanceMapShader.use();
             importanceMapShader.setVec2("sphereTexCoords", glm::vec2(g_sphereTexCoordsCurrent[0], g_sphereTexCoordsCurrent[1]));
@@ -561,7 +594,13 @@ int main()
         importanceMapShader.use();
         renderQuad();*/
         glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
-        pbrShader.use();
+
+        glBindFramebuffer(GL_FRAMEBUFFER, sphereTexCoordsFBO);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            sphereTexcoordsShader.use();
+            sphereTexcoordsShader.setMat4("model", model);
+            renderSphere();
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         // gold
         glActiveTexture(GL_TEXTURE3);
@@ -577,6 +616,7 @@ int main()
 
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(-3.0, 0.0, 2.0));
+        pbrShader.use();
         pbrShader.setMat4("model", model);
         pbrShader.setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
         renderSphere();
@@ -594,7 +634,13 @@ int main()
         importanceSampleVisualShader.use();
         importanceSampleVisualShader.setMat4("model", model);
         renderPoint();
-        pbrShader.use();
+
+        glBindFramebuffer(GL_FRAMEBUFFER, sphereTexCoordsFBO);
+            //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            sphereTexcoordsShader.use();
+            sphereTexcoordsShader.setMat4("model", model);
+            renderSphere();
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         // grass
         glActiveTexture(GL_TEXTURE3);
@@ -610,6 +656,7 @@ int main()
 
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(-1.0, 0.0, 2.0));
+        pbrShader.use();
         pbrShader.setMat4("model", model);
         pbrShader.setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
         renderSphere();
@@ -627,7 +674,13 @@ int main()
         importanceSampleVisualShader.use();
         importanceSampleVisualShader.setMat4("model", model);
         renderPoint();
-        pbrShader.use();
+
+        glBindFramebuffer(GL_FRAMEBUFFER, sphereTexCoordsFBO);
+            //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            sphereTexcoordsShader.use();
+            sphereTexcoordsShader.setMat4("model", model);
+            renderSphere();
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         // plastic
         glActiveTexture(GL_TEXTURE3);
@@ -643,6 +696,7 @@ int main()
 
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(1.0, 0.0, 2.0));
+        pbrShader.use();
         pbrShader.setMat4("model", model);
         pbrShader.setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
         renderSphere();
@@ -660,7 +714,13 @@ int main()
         importanceSampleVisualShader.use();
         importanceSampleVisualShader.setMat4("model", model);
         renderPoint();
-        pbrShader.use();
+
+        glBindFramebuffer(GL_FRAMEBUFFER, sphereTexCoordsFBO);
+            //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            sphereTexcoordsShader.use();
+            sphereTexcoordsShader.setMat4("model", model);
+            renderSphere();
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         // wall
         glActiveTexture(GL_TEXTURE3);
@@ -676,6 +736,7 @@ int main()
 
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(3.0, 0.0, 2.0));
+        pbrShader.use();
         pbrShader.setMat4("model", model);
         pbrShader.setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
         renderSphere();
@@ -693,11 +754,18 @@ int main()
         importanceSampleVisualShader.use();
         importanceSampleVisualShader.setMat4("model", model);
         renderPoint();
-        pbrShader.use();
+
+        glBindFramebuffer(GL_FRAMEBUFFER, sphereTexCoordsFBO);
+            //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            sphereTexcoordsShader.use();
+            sphereTexcoordsShader.setMat4("model", model);
+            renderSphere();
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         // render light source (simply re-render sphere at light positions)
         // this looks a bit off as we use the same shader, but it'll make their positions obvious and 
         // keeps the codeprint small.
+        pbrShader.use();
         for (unsigned int i = 0; i < sizeof(lightPositions) / sizeof(lightPositions[0]); ++i)
         {
             glm::vec3 newPos = lightPositions[i] + glm::vec3(sin(glfwGetTime() * 5.0) * 5.0, 0.0, 0.0);
@@ -838,6 +906,40 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
     lastY = ypos;
 
     camera.ProcessMouseMovement(xoffset, yoffset);
+}
+
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+    if (button == GLFW_MOUSE_BUTTON_LEFT)
+    {
+        if (action == GLFW_PRESS)
+        {
+            double x, y;
+            glfwGetCursorPos(window, &x, &y);
+            float viewportX = x;
+            float viewportY = SCR_HEIGHT - y;
+            if (viewportX <= SCR_WIDTH && viewportY <= SCR_HEIGHT)
+            {
+                printf("Mouse clicked at windows (%f, %f)\n", x, y);
+                printf("Mouse clicked at glViewport (%f, %f)\n", viewportX, viewportY);
+                unsigned int bufferX = viewportX;
+                unsigned int bufferY = viewportY;
+                printf("Mouse clicked at sphereTexCoords-Buffer (%d, %d)\n", bufferX, bufferY);
+                //gPosition
+                GLint width, height;
+                glBindTexture(GL_TEXTURE_2D, sphereTexCoordsMap);
+                glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);  
+                glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
+                //glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_DEPTH, &depth);
+                std::cout << "width: " << width << ", height: " << height << ", sizeof(GLfloat): " << sizeof(GLfloat) << std::endl;
+                g_sphereTexCoordDatas.resize(width * height * 3);
+                glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_FLOAT, g_sphereTexCoordDatas.data());
+                unsigned int dataIndex = (bufferX + bufferY * width) * 3;
+                g_sphereTexCoords[0] = g_sphereTexCoordDatas[dataIndex];
+                g_sphereTexCoords[1] = g_sphereTexCoordDatas[dataIndex + 1];
+            }
+        }
+    }
 }
 
 // glfw: whenever the mouse scroll wheel scrolls, this callback is called
