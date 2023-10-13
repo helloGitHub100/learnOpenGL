@@ -69,6 +69,7 @@ bool g_bFixMiplevel = false;
 int g_pointVisualNum = 8;
 float g_sphereTexCoords[2] = {0.0f, 0.0f};
 float g_sphereTexCoordsCurrent[2] = {0.0f, 0.0f};
+bool g_bShowImportanceSamples = true;
 
 int main()
 {
@@ -576,7 +577,8 @@ int main()
         glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
         importanceSampleVisualShader.use();
         importanceSampleVisualShader.setMat4("model", model);
-        renderPoint();
+        if (g_bShowImportanceSamples)
+            renderPoint();
 
         /*for (int i = 0; i < 200; i++)
         {
@@ -633,7 +635,8 @@ int main()
         glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
         importanceSampleVisualShader.use();
         importanceSampleVisualShader.setMat4("model", model);
-        renderPoint();
+        if (g_bShowImportanceSamples)
+            renderPoint();
 
         glBindFramebuffer(GL_FRAMEBUFFER, sphereTexCoordsFBO);
             //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -673,7 +676,8 @@ int main()
         glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
         importanceSampleVisualShader.use();
         importanceSampleVisualShader.setMat4("model", model);
-        renderPoint();
+        if (g_bShowImportanceSamples)
+            renderPoint();
 
         glBindFramebuffer(GL_FRAMEBUFFER, sphereTexCoordsFBO);
             //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -713,7 +717,8 @@ int main()
         glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
         importanceSampleVisualShader.use();
         importanceSampleVisualShader.setMat4("model", model);
-        renderPoint();
+        if (g_bShowImportanceSamples)
+            renderPoint();
 
         glBindFramebuffer(GL_FRAMEBUFFER, sphereTexCoordsFBO);
             //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -753,7 +758,8 @@ int main()
         glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
         importanceSampleVisualShader.use();
         importanceSampleVisualShader.setMat4("model", model);
-        renderPoint();
+        if (g_bShowImportanceSamples)
+            renderPoint();
 
         glBindFramebuffer(GL_FRAMEBUFFER, sphereTexCoordsFBO);
             //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -817,9 +823,13 @@ int main()
         }
         if (ImGui::CollapsingHeader("Importance sample visual setting", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            ImGui::SliderInt("point visual number", &g_pointVisualNum, 1, 8);
-            ImGui::SliderFloat("Sphere tex x-coords", g_sphereTexCoords, 0.0f, 1.0f);
-            ImGui::SliderFloat("Sphere tex y-coords", g_sphereTexCoords + 1, 0.0f, 1.0f);
+            ImGui::Checkbox("Show importance samples", &g_bShowImportanceSamples);
+            if (g_bShowImportanceSamples)
+            {
+                ImGui::SliderInt("point visual number", &g_pointVisualNum, 1, 8);
+                ImGui::SliderFloat("Sphere tex x-coords", g_sphereTexCoords, 0.0f, 1.0f);
+                ImGui::SliderFloat("Sphere tex y-coords", g_sphereTexCoords + 1, 0.0f, 1.0f);
+            }
         }
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 
