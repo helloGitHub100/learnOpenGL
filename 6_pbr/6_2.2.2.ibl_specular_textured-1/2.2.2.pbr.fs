@@ -20,6 +20,7 @@ uniform float irradianceConst = 0.03;
 uniform bool enableIblSpecular = true;
 uniform bool fixMiplevel = false;
 uniform float miplevel = 0.0;
+uniform float albedoScale = 1.0;
 
 // lights
 uniform vec3 lightPositions[4];
@@ -99,7 +100,7 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
 void main()
 {		
     // material properties
-    vec3 albedo = pow(texture(albedoMap, TexCoords).rgb, vec3(2.2));
+    vec3 albedo = pow(texture(albedoMap, TexCoords).rgb, vec3(2.2)) * albedoScale;
     float metallic = texture(metallicMap, TexCoords).r;
     float roughness = texture(roughnessMap, TexCoords).r;
     float ao = texture(aoMap, TexCoords).r;

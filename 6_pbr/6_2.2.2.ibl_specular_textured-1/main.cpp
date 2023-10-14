@@ -67,9 +67,18 @@ int g_lightNumber = 4;
 float g_miplevel = 0.0f;
 bool g_bFixMiplevel = false;
 int g_pointVisualNum = 8;
+float g_albedoScale = 1.0f;
 float g_sphereTexCoords[2] = {0.0f, 0.0f};
 float g_sphereTexCoordsCurrent[2] = {0.0f, 0.0f};
 bool g_bShowImportanceSamples = true;
+enum BackgroundOptions
+{
+    BackgroundOptions_None,
+    BackgroundOptions_Env,
+    BackgroundOptions_Irradiance,
+    BackgroundOptions_Prefilter
+};
+int g_backgoundMode = BackgroundOptions_Env;
 
 int main()
 {
@@ -511,7 +520,8 @@ int main()
         // render
         // ------
         glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        //glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // render scene, supplying the convoluted irradiance map to the final shader.
@@ -529,6 +539,7 @@ int main()
         pbrShader.setInt("lightNumber", g_lightNumber);
         pbrShader.setBool("fixMiplevel", g_bFixMiplevel);
         pbrShader.setFloat("miplevel", g_miplevel);
+        pbrShader.setFloat("albedoScale", g_albedoScale);
         importanceSampleVisualShader.use();
         importanceSampleVisualShader.setMat4("projection", projection);
         importanceSampleVisualShader.setMat4("view", view);
@@ -793,10 +804,21 @@ int main()
         backgroundShader.setMat4("view", view);
         backgroundShader.setFloat("miplevel", g_miplevel);
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
-        //glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap); // display irradiance map
-        //glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap); // display prefilter map
-        renderCube();
+        if (g_backgoundMode == BackgroundOptions_Env)
+        {
+            glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
+            renderCube();
+        }
+        else if (g_backgoundMode == BackgroundOptions_Irradiance)
+        {
+            glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap); // display irradiance map
+            renderCube();
+        }
+        else if (g_backgoundMode == BackgroundOptions_Prefilter)
+        {
+            glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap); // display prefilter map
+            renderCube();
+        }
 
         // render BRDF map to screen
         //brdfShader.Use();
@@ -811,6 +833,7 @@ int main()
         ImGui::Text("Current cursor mode: %d", g_bCaptureCursor ? 2 : 1);
         if (ImGui::CollapsingHeader("Light setting", ImGuiTreeNodeFlags_DefaultOpen))
         {
+            ImGui::SliderFloat("albedo scale", &g_albedoScale, 0.0f, 1.0f);
             ImGui::SliderInt("light number", &g_lightNumber, 0, 4);
             ImGui::Checkbox("IBL diffuse", &g_bIblDiffuse);
             if (!g_bIblDiffuse)
@@ -818,7 +841,10 @@ int main()
             ImGui::Checkbox("IBL specular", &g_bIblSpecular);
             if (g_bIblSpecular)
                 ImGui::Checkbox("IBL fix miplevel from prefilter map", &g_bFixMiplevel);
-            
+            ImGui::RadioButton("Skybox: None", &g_backgoundMode, BackgroundOptions_None);
+            ImGui::RadioButton("Skybox: envCubemap", &g_backgoundMode, BackgroundOptions_Env);
+            ImGui::RadioButton("Skybox: irradianceMap", &g_backgoundMode, BackgroundOptions_Irradiance);
+            ImGui::RadioButton("Skybox: prefilterMap", &g_backgoundMode, BackgroundOptions_Prefilter);
             ImGui::SliderFloat("Enviroment miplevel", &g_miplevel, 0.0f, 4.0, "%.1f");
         }
         if (ImGui::CollapsingHeader("Importance sample visual setting", ImGuiTreeNodeFlags_DefaultOpen))
