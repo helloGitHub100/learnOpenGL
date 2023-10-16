@@ -120,16 +120,82 @@ Mesh Model::processMesh(aiMesh *mesh, const aiScene *scene)
     // 3. normal maps
     std::vector<Texture> normalMaps = loadMaterialTextures(material, aiTextureType_HEIGHT, "texture_normal");
     textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
+    bool heightNormalFlag = false;
+    bool normalFlag = false;
+    if (normalMaps.size() > 0)
+        heightNormalFlag = true;
+    std::vector<Texture> normalMaps1 = loadMaterialTextures(material, aiTextureType_NORMALS, "texture_normal");
+    if (normalMaps1.size() > 0)
+        normalFlag = true;
+    if (normalMaps.size() > 0 && heightNormalFlag && normalFlag)
+        std::cout << "[Model::processMesh] warning: aiTextureType_HEIGHT and aiTextureType_NORMALS both are recognize as normalMaps!" << std::endl;
+    if (normalMaps.size() > 0 && normalMaps1 == normalMaps)
+        std::cout << "[Model::processMesh] warning: aiTextureType_NORMALS has been loaded repeatly as " << normalMaps[0].type << std::endl;
+    else
+        textures.insert(textures.end(), normalMaps1.begin(), normalMaps1.end());
     // 4. height maps
     std::vector<Texture> heightMaps = loadMaterialTextures(material, aiTextureType_AMBIENT, "texture_height");
     textures.insert(textures.end(), heightMaps.begin(), heightMaps.end());
-    
+    // 5. PBR albedo
+    vector<bool> bRepeats;
+    std::vector<Texture> albedoMaps = loadMaterialTextures(material, aiTextureType_BASE_COLOR, "texture_albedo", &bRepeats);
+    for (size_t i = 0; i < albedoMaps.size(); i++)
+    {
+        if (bRepeats[i])//避免重复添加
+        {
+            std::cout << "[Model::processMesh] warning: aiTextureType_BASE_COLOR has been loaded repeatly as " << albedoMaps[i].type << std::endl;
+            albedoMaps.erase(albedoMaps.begin() + i);
+            bRepeats.erase(bRepeats.begin() + i);
+            --i;
+        }
+    }
+    textures.insert(textures.end(), albedoMaps.begin(), albedoMaps.end());
+    // 6. PBR metallicMap
+    std::vector<Texture> metallicMaps = loadMaterialTextures(material, aiTextureType_METALNESS, "texture_metallic");
+    textures.insert(textures.end(), metallicMaps.begin(), metallicMaps.end());
+    // 7. PBR roughnessMap
+    std::vector<Texture> roughnessMaps = loadMaterialTextures(material, aiTextureType_DIFFUSE_ROUGHNESS, "texture_roughness", &bRepeats);
+    for (size_t i = 0; i < roughnessMaps.size(); i++)
+    {
+        if (bRepeats[i])//避免重复添加
+        {
+            std::cout << "[Model::processMesh] warning: aiTextureType_DIFFUSE_ROUGHNESS has been loaded repeatly as " << roughnessMaps[i].type << std::endl;
+            roughnessMaps.erase(roughnessMaps.begin() + i);
+            bRepeats.erase(bRepeats.begin() + i);
+            --i;
+        }
+    }
+    textures.insert(textures.end(), roughnessMaps.begin(), roughnessMaps.end());
+    // 8. PBR aoMap
+    std::vector<Texture> aoMaps = loadMaterialTextures(material, aiTextureType_UNKNOWN, "texture_ao", &bRepeats);
+    for (size_t i = 0; i < aoMaps.size(); i++)
+    {
+        if (bRepeats[i])//避免重复添加
+        {
+            std::cout << "[Model::processMesh] warning: aiTextureType_UNKNOWN has been loaded repeatly as " << aoMaps[i].type << std::endl;
+            aoMaps.erase(aoMaps.begin() + i);
+            bRepeats.erase(bRepeats.begin() + i);
+            --i;
+        }
+    }
+    textures.insert(textures.end(), aoMaps.begin(), aoMaps.end());
+    // 9. other maps
+    for (int j = aiTextureType_EMISSIVE; j < AI_TEXTURE_TYPE_MAX; j++)
+    {
+        if (j == aiTextureType_HEIGHT)
+            continue;
+        std::vector<Texture> otherMaps = loadMaterialTextures(material, aiTextureType(j), "texture_other");
+        if (otherMaps.size() > 0)
+            std::cout << "[Model::processMesh] Unknown Map: " << j << std::endl;
+    }
     // return a mesh object created from the extracted mesh data
     return Mesh(vertices, indices, textures);
 }
 
-vector<Texture> Model::loadMaterialTextures(aiMaterial *mat, aiTextureType type, string typeName)
+vector<Texture> Model::loadMaterialTextures(aiMaterial *mat, aiTextureType type, string typeName, vector<bool> *bRepeats/* = nullptr*/)
 {
+    if (bRepeats != nullptr)
+        bRepeats->clear();
     vector<Texture> textures;
     for(unsigned int i = 0; i < mat->GetTextureCount(type); i++)
     {
@@ -157,6 +223,8 @@ vector<Texture> Model::loadMaterialTextures(aiMaterial *mat, aiTextureType type,
             textures.push_back(texture);
             textures_loaded.push_back(texture);  // store it as texture loaded for entire model, to ensure we won't unnecessary load duplicate textures.
         }
+        if (bRepeats != nullptr)
+           bRepeats->push_back(skip);
     }
     return textures;
 }

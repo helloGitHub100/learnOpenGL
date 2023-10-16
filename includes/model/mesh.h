@@ -30,6 +30,9 @@ struct Texture {
     unsigned int id;
     string type;
     string path;    // 我们储存纹理的路径用于与其它纹理进行比较
+    bool operator==(const Texture& other) const {
+        return id == other.id && type == other.type && path == other.path;
+    }
 };
 
 class Mesh {

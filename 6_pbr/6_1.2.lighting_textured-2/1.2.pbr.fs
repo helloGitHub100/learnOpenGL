@@ -11,6 +11,7 @@ uniform sampler2D normalMap;
 uniform sampler2D metallicMap;
 uniform sampler2D roughnessMap;
 uniform sampler2D aoMap;
+uniform sampler2D emission;
 
 // lights
 uniform vec3 lightPositions[4];
@@ -143,7 +144,7 @@ void main()
     // HDR tonemapping
     color = color / (color + vec3(1.0));
     // gamma correct
-    color = pow(color, vec3(1.0/2.2)); 
+    color = pow(color, vec3(1.0/2.2)) + texture(emission, TexCoords).rgb; 
 
     FragColor = vec4(color, 1.0);
 }

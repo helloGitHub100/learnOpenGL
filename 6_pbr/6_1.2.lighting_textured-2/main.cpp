@@ -105,6 +105,7 @@ int main()
     shader.setInt("roughnessMap", 3);
     shader.setInt("aoMap", 4);
     shader.setInt("heightMap", 5);
+    shader.setInt("emission", 6);
 
     normalShader.use();
     normalShader.setInt("heightMap", 5);
@@ -124,6 +125,7 @@ int main()
     unsigned int roughness = loadTexture(RESOURCES_DIR"/textures/pbr/columned-lava-rock-bl/columned-lava-rock_roughness.png");
     unsigned int ao        = loadTexture(RESOURCES_DIR"/textures/pbr/columned-lava-rock-bl/columned-lava-rock_ao.png");
     unsigned int heightTex = loadTexture(RESOURCES_DIR"/textures/pbr/columned-lava-rock-bl/columned-lava-rock_height.png");
+    unsigned int emission =  loadTexture(RESOURCES_DIR"/textures/pbr/columned-lava-rock-bl/columned-lava-rock_emissive.png");
 
     // lights
     // ------
@@ -192,6 +194,8 @@ int main()
         glBindTexture(GL_TEXTURE_2D, ao);
         glActiveTexture(GL_TEXTURE5);
         glBindTexture(GL_TEXTURE_2D, heightTex);
+        glActiveTexture(GL_TEXTURE6);
+        glBindTexture(GL_TEXTURE_2D, emission);
 
         // render rows*column number of spheres with material properties defined by textures (they all have the same material properties)
         glm::mat4 model = glm::mat4(1.0f);

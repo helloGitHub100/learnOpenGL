@@ -29,6 +29,14 @@ void Mesh::Draw(unsigned int ID)
             number = std::to_string(normalNr++); // transfer unsigned int to string
         else if(name == "texture_height")
             number = std::to_string(heightNr++); // transfer unsigned int to string
+        else if(name == "texture_albedo")
+            number = std::to_string(diffuseNr++);
+        else if(name == "texture_metallic")
+            number = std::to_string(specularNr++);
+        else if(name == "texture_roughness")
+            number = std::to_string(normalNr++);
+        else if(name == "texture_ao")
+            number = std::to_string(heightNr++);
 
         glUniform1i(glGetUniformLocation(ID, (name + number).c_str()), i);
         glBindTexture(GL_TEXTURE_2D, textures[i].id);
