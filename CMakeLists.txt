@@ -23,8 +23,9 @@ find_package(glfw3 CONFIG REQUIRED)
 find_package(glad CONFIG REQUIRED)
 find_package(assimp CONFIG REQUIRED)
 find_package(imgui CONFIG REQUIRED)
+find_package(Freetype REQUIRED)
 
-link_libraries(glfw glad::glad assimp::assimp imgui::imgui)
+link_libraries(glfw glad::glad assimp::assimp imgui::imgui Freetype::Freetype)
 
 set(Include_Common_Dir ${CMAKE_CURRENT_SOURCE_DIR}/includes/)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Shader/)

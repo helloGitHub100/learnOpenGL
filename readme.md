@@ -24,7 +24,8 @@ vcpkg install assimp:x64-windows
 vcpkg install imgui:x64-windows
 vcpkg install imgui[glfw-binding]:x64-windows --recurse
 vcpkg install imgui[opengl3-binding]:x64-windows --recurse
-
+#### 安装FreeType
+vcpkg install freetype:x64-windows
 
 #### 安装vs编译工具包（编译器、生成器、cmake）
 
