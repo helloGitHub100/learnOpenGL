@@ -1,6 +1,7 @@
 ﻿#include <iostream>
 #include <map>
 #include <string>
+#include <vector>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -12,15 +13,25 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
+#include <filesystem>
 #include <shader_m.h>
+
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
 void RenderText(Shader &shader, std::wstring text, float x, float y, float scale, glm::vec3 color, FT_Face face);
 
+// fonts
+std::string fontFileNameCurrent;
+std::vector<std::string> getFileNames(std::string path);
+
 // settings
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
+unsigned int SCR_WIDTH = 800;
+unsigned int SCR_HEIGHT = 600;
+unsigned int ImGui_Width = 500;
 
 /// Holds all state information relevant to a character as loaded using FreeType
 struct Character {
@@ -35,6 +46,10 @@ Character getCharFromFreeType(FT_Face face,
 
 std::map<FT_ULong, Character> Characters;
 unsigned int VAO, VBO;
+
+// imGui Params
+bool g_bCaptureCursor = true;
+int g_fileIndex = 0;
 
 int main()
 {
@@ -51,7 +66,7 @@ int main()
 
     // glfw window creation
     // --------------------
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH + ImGui_Width, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -93,33 +108,24 @@ int main()
     }
 
 	// find path to font
-    std::string font_name = RESOURCES_DIR"/fonts/simhei.ttf";
-    if (font_name.empty())
+    std::vector<std::string> fontFiles = getFileNames(RESOURCES_DIR"/fonts/");
+    std::vector<char *> fontFilesChar(fontFiles.size());
+    for (int i = 0; i < fontFiles.size(); i++)
+        fontFilesChar[i] = const_cast<char *>(fontFiles[i].c_str());
+    std::string font_name = "simhei.ttf";
     {
-        std::cout << "ERROR::FREETYPE: Failed to load font_name" << std::endl;
-        return -1;
-    }
-	
-	// load font as face
-    FT_Face face;
-    if (FT_New_Face(ft, font_name.c_str(), 0, &face)) {
-        std::cout << "ERROR::FREETYPE: Failed to load font" << std::endl;
-        return -1;
-    }
-    else {
-        // set size to load glyphs as
-        FT_Set_Pixel_Sizes(face, 0, 48);
-
-        // disable byte-alignment restriction
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
-        // load first 128 characters of ASCII set
-        for (unsigned char c = 0; c < 1; c++)
+        auto it = std::find(fontFiles.begin(), fontFiles.end(), font_name);
+        int index = it == fontFiles.end() ? -1 : std::distance(fontFiles.begin(), it);
+        if (font_name.empty() || index < 0)
         {
-            getCharFromFreeType(face, c, FT_LOAD_RENDER);
+            std::cout << "ERROR::FREETYPE: Failed to load font_name" << std::endl;
+            return -1;
         }
-        glBindTexture(GL_TEXTURE_2D, 0);
+        g_fileIndex = index;
+        font_name = RESOURCES_DIR"/fonts/" + font_name;
     }
+	// load font as face
+    FT_Face face = nullptr;
     
     // configure VAO/VBO for texture quads
     // -----------------------------------
@@ -132,7 +138,16 @@ int main()
     glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
+    
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO &io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 330");
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
@@ -141,14 +156,65 @@ int main()
         // -----
         processInput(window);
 
+        if (g_fileIndex < fontFiles.size() && fontFileNameCurrent != fontFiles[g_fileIndex])
+        {
+            fontFileNameCurrent = fontFiles[g_fileIndex];
+            font_name = RESOURCES_DIR"/fonts/" + fontFileNameCurrent;
+            //std::cout << "Debug: " << fontFileNameCurrent << std::endl;
+            if (face != nullptr)
+                FT_Done_Face(face);
+            Characters.clear();
+            if (FT_New_Face(ft, font_name.c_str(), 0, &face))
+            {
+                std::cout << "ERROR::FREETYPE: Failed to load font" << std::endl;
+                return -1;
+            }
+            else
+            {
+                // set size to load glyphs as
+                FT_Set_Pixel_Sizes(face, 0, 48);
+            }
+        }
+
         // render
         // ------
+        glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
         RenderText(shader, L"hello world 你好，世界！", 25.0f, 25.0f, 1.0f, glm::vec3(0.5, 0.8f, 0.2f), face);
         RenderText(shader, L"(C) LearnOpenGL.com", 540.0f, 570.0f, 0.5f, glm::vec3(0.3, 0.7f, 0.9f), face);
        
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        ImGui::Begin("Param Setting");
+        ImGui::Text("Press \"1\" to show cursor and switch to setting mode.");
+        ImGui::Text("Press \"2\" to hide cursor and finishe setting mode.");
+        ImGui::Text("Current cursor mode: %d", g_bCaptureCursor ? 2 : 1);
+        ImGui::Combo("Font files", &g_fileIndex, fontFilesChar.data(), fontFiles.size());
+        if (ImGui::Button("Update file list"))
+        {
+            fontFiles = getFileNames(RESOURCES_DIR"/fonts/");
+            fontFilesChar.resize(fontFiles.size());
+            for (int i = 0; i < fontFiles.size(); i++)
+                fontFilesChar[i] = const_cast<char *>(fontFiles[i].c_str());
+            auto it = std::find(fontFiles.begin(), fontFiles.end(), fontFileNameCurrent);
+            if (it != fontFiles.end()) {
+                // 找到了目标字符串，it 指向了该字符串的位置
+                g_fileIndex = int(std::distance(fontFiles.begin(), it));
+                std::cout << "当前选中的字体文件编号： " << g_fileIndex << std::endl;
+            } else {
+                std::cout << "在当前文件列表中找不到文件： " << fontFileNameCurrent << "， 将会默认选中第一个字体文件" << std::endl;
+                g_fileIndex = 0;
+            }
+        }
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+
+        ImGui::End();
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);
@@ -157,6 +223,10 @@ int main()
     // destroy FreeType once we're finished
     FT_Done_Face(face);
     FT_Done_FreeType(ft);
+
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
     
     glfwTerminate();
     return 0;
@@ -176,7 +246,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     // make sure the viewport matches the new window dimensions; note that width and 
     // height will be significantly larger than specified on retina displays.
-    glViewport(0, 0, width, height);
+    SCR_WIDTH = width - ImGui_Width;
+    SCR_HEIGHT = height;
 }
 
 
@@ -238,6 +309,7 @@ Character getCharFromFreeType(FT_Face face,
                               FT_ULong c,
                               FT_Int32 load_flags)
 {
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     if (FT_Load_Char(face, c, load_flags))
     {
         std::cout << "ERROR::getCharFromFreeType: Failed to load Glyph" << std::endl;
@@ -272,4 +344,30 @@ Character getCharFromFreeType(FT_Face face,
     };
     Characters.insert(std::pair<FT_ULong, Character>(c, character));
     return character;
+}
+
+std::vector<std::string> getFileNames(std::string path)
+{
+    std::vector<std::string> files;
+
+    for (const auto& entry : std::filesystem::directory_iterator(path)) {
+        if (entry.path().extension() == ".ttf" ||
+            entry.path().extension() == ".ttc" ||
+            entry.path().extension() == ".otf" ||
+            entry.path().extension() == ".pfb" ||
+            entry.path().extension() == ".bdf" ||
+            entry.path().extension() == ".pcf" ||
+            entry.path().extension() == ".fon" ||
+            entry.path().extension() == ".fnt" ||
+            entry.path().extension() == ".pfr")
+        {
+            files.push_back(entry.path().filename().string());
+        }
+    }
+
+    std::cout << "files in " << path << ":\n";
+    /*for (const auto& fileCur : files) {
+        std::cout << fileCur << "\n";
+    }*/
+    return files;
 }
