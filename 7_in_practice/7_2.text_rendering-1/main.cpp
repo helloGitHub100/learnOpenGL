@@ -20,10 +20,15 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 
+#include <locale>
+#include <codecvt>
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
 void RenderText(Shader &shader, std::wstring text, float x, float y, float scale, glm::vec3 color, FT_Face face);
-
+void RenderTextSingleTexture(Shader &shader, std::wstring text, int x, int y, float scale, glm::vec3 color, FT_Face face);
+std::wstring utf8_to_wstring(const std::string &utf8_str);
+std::string wstring_to_utf8(const std::wstring& wstr);
 // fonts
 std::string fontFileNameCurrent;
 std::vector<std::string> getFileNames(std::string path);
@@ -40,16 +45,50 @@ struct Character {
     glm::ivec2   Bearing;   // Offset from baseline to left/top of glyph
     unsigned int Advance;   // Horizontal offset to advance to next glyph
 };
+
+struct CharacterBuffer
+{
+    std::vector<unsigned char> bitmap; // bitmap data
+    glm::ivec2   Size;      // Size of glyph
+    glm::ivec2   Bearing;   // Offset from baseline to left/top of glyph
+    unsigned int Advance;   // Horizontal offset to advance to next glyph
+};
+
+struct textTextureInfo
+{
+    GLuint textureID = 0;
+    int width = 0;
+    int height = 0;
+    int dx = 0;
+};
+
+
 Character getCharFromFreeType(FT_Face face,
                               FT_ULong c,
                               FT_Int32 load_flags);
 
+void addCharBufferMapFromFreeType(FT_Face face,
+                                     FT_ULong c,
+                                     FT_Int32 load_flags);
+
 std::map<FT_ULong, Character> Characters;
+std::map<FT_ULong, CharacterBuffer> CharacterBuffers;
+std::map<std::wstring, textTextureInfo> wstringToTextureMap;
+
 unsigned int VAO, VBO;
 
 // imGui Params
 bool g_bCaptureCursor = true;
 int g_fileIndex = 0;
+int g_fontHeight = 48;
+int g_fontHeightCur = 0;
+float g_fontScale = 1.0f;
+float g_fontMatrixScale = 1.0f;
+float g_fontMatrixScaleCur = 1.0f;
+float g_fontMatrixAngle = 0.0f;
+float g_fontMatrixAngleCur = 0.0f;
+bool g_bBlend = true;
+std::string g_inputText;
 
 int main()
 {
@@ -93,9 +132,6 @@ int main()
     // compile and setup the shader
     // ----------------------------
     Shader shader(VERTEX_FILE, FRAGMENT_FILE);
-    glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT));
-    shader.use();
-    glUniformMatrix4fv(glGetUniformLocation(shader.ID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 
     // FreeType
     // --------
@@ -126,6 +162,7 @@ int main()
     }
 	// load font as face
     FT_Face face = nullptr;
+    g_inputText.resize(256);
     
     // configure VAO/VBO for texture quads
     // -----------------------------------
@@ -144,10 +181,13 @@ int main()
     ImGuiIO &io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-
+    ImFont *font = io.Fonts->AddFontFromFileTTF(font_name.c_str(), 15, nullptr,
+                                                io.Fonts->GetGlyphRangesChineseFull());
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
+
+    int inputLength = 0;
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
@@ -155,15 +195,27 @@ int main()
         // input
         // -----
         processInput(window);
+        if (g_bBlend)
+            glEnable(GL_BLEND);
+        else
+            glDisable(GL_BLEND);
 
-        if (g_fileIndex < fontFiles.size() && fontFileNameCurrent != fontFiles[g_fileIndex])
+        if ((g_fileIndex < fontFiles.size() && fontFileNameCurrent != fontFiles[g_fileIndex]) ||
+        g_fontHeight != g_fontHeightCur ||
+        g_fontMatrixScale != g_fontMatrixScaleCur ||
+        g_fontMatrixAngle != g_fontMatrixAngleCur)
         {
+            g_fontHeightCur = g_fontHeight;
             fontFileNameCurrent = fontFiles[g_fileIndex];
+            g_fontMatrixScaleCur = g_fontMatrixScale;
+            g_fontMatrixAngleCur = g_fontMatrixAngle;
+
             font_name = RESOURCES_DIR"/fonts/" + fontFileNameCurrent;
             //std::cout << "Debug: " << fontFileNameCurrent << std::endl;
             if (face != nullptr)
                 FT_Done_Face(face);
             Characters.clear();
+            CharacterBuffers.clear();
             if (FT_New_Face(ft, font_name.c_str(), 0, &face))
             {
                 std::cout << "ERROR::FREETYPE: Failed to load font" << std::endl;
@@ -172,7 +224,21 @@ int main()
             else
             {
                 // set size to load glyphs as
-                FT_Set_Pixel_Sizes(face, 0, 48);
+                FT_Set_Pixel_Sizes(face, 0, g_fontHeightCur);
+                glm::mat4 model = glm::mat4(1.0f);
+                model = glm::scale(model, glm::vec3(g_fontMatrixScaleCur));
+                model = glm::rotate(model, glm::radians(g_fontMatrixAngleCur), glm::vec3(0.0f, 0.0f, 1.0f));
+                FT_Matrix ftMatrix;
+                ftMatrix.xx = (FT_Fixed)(model[0][0] * 0x10000L);
+                ftMatrix.xy = (FT_Fixed)(model[0][1] * 0x10000L);
+                ftMatrix.yx = (FT_Fixed)(model[1][0] * 0x10000L);
+                ftMatrix.yy = (FT_Fixed)(model[1][1] * 0x10000L);
+                /*matrix.xx = (1 << 16) * g_fontMatrixScaleCur;  // 设置缩放比例
+                matrix.yy = (1 << 16) * g_fontMatrixScaleCur;  // 设置缩放比例
+                float radianAngle = g_fontMatrixAngleCur * glm::pi<float>() / 180.0f;
+                matrix.xy = -radianAngle * (1 << 16); // 设置旋转角度
+                matrix.yx = radianAngle * (1 << 16);*/  // 设置旋转角度
+                FT_Set_Transform(face, &ftMatrix, 0);
             }
         }
 
@@ -182,8 +248,20 @@ int main()
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        RenderText(shader, L"hello world 你好，世界！", 25.0f, 25.0f, 1.0f, glm::vec3(0.5, 0.8f, 0.2f), face);
+        glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT));
+        shader.use();
+        glUniformMatrix4fv(glGetUniformLocation(shader.ID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+
+        float t0 = static_cast<float>(glfwGetTime());
+        RenderText(shader, L"Oh my god! 你好，世界！", 25.0f, float(g_fontHeightCur), g_fontScale, glm::vec3(0.5, 0.8f, 0.2f), face);
+        float t1 = static_cast<float>(glfwGetTime());
+        RenderTextSingleTexture(shader, L"Oh my god! 你好，世界！", 25, g_fontHeightCur + g_fontHeightCur * g_fontScale * g_fontMatrixScaleCur, g_fontScale, glm::vec3(0.5, 0.8f, 0.2f), face);
+        float t2 = static_cast<float>(glfwGetTime());
         RenderText(shader, L"(C) LearnOpenGL.com", 540.0f, 570.0f, 0.5f, glm::vec3(0.3, 0.7f, 0.9f), face);
+
+        int length = strcspn(g_inputText.c_str(), "\0");
+        std::string inputTextTemp = g_inputText.substr(0, length);
+        RenderTextSingleTexture(shader, utf8_to_wstring(inputTextTemp), 25, 400, g_fontScale, glm::vec3(0.8, 0.5f, 0.2f), face);
        
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -210,6 +288,19 @@ int main()
                 g_fileIndex = 0;
             }
         }
+        ImGui::SliderInt("Font height", &g_fontHeight, 8, 1000);
+        ImGui::SliderFloat("Font scale", &g_fontScale, 0.1f, 20.0f, "%.1f");
+        ImGui::SliderFloat("Font transform scale", &g_fontMatrixScale, 0.1f, 20.0f, "%.1f");
+        ImGui::SliderFloat("Font transform angle", &g_fontMatrixAngle, -180.0f, 180.0f, "%.1f");
+        ImGui::Checkbox("Blend", &g_bBlend);
+        ImGui::PushID("InputText"); // 将字符串作为ID推入栈
+        ImGui::InputText(wstring_to_utf8(L"输入框").c_str(), g_inputText.data(), g_inputText.size());
+        ImGui::PopID(); // 弹出ID
+        //ImGui::Text(g_inputText.data());//测试输入框的内容
+        float dt01 = (t1 - t0) * 100000.0f;
+        float dt12 = (t2 - t1) * 100000.0f;
+        ImGui::Text("Render Text with a texture %.3f e-05 ms", dt12);
+        ImGui::Text("Render Text separately %.3f e-05 ms", dt01);
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 
         ImGui::End();
@@ -255,6 +346,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 // -------------------
 void RenderText(Shader &shader, std::wstring text, float x, float y, float scale, glm::vec3 color, FT_Face face)
 {
+    if (text.empty())
+        return;
     // activate corresponding render state	
     shader.use();
     glUniform3f(glGetUniformLocation(shader.ID, "textColor"), color.x, color.y, color.z);
@@ -262,8 +355,7 @@ void RenderText(Shader &shader, std::wstring text, float x, float y, float scale
     glBindVertexArray(VAO);
 
     // iterate through all characters
-    std::wstring::const_iterator c;
-    for (c = text.begin(); c != text.end(); c++) 
+    for (std::wstring::const_iterator c = text.begin(); c != text.end(); c++) 
     {
         auto it = Characters.find(*c);
         Character ch;
@@ -299,9 +391,114 @@ void RenderText(Shader &shader, std::wstring text, float x, float y, float scale
         // render quad
         glDrawArrays(GL_TRIANGLES, 0, 6);
         // now advance cursors for next glyph (note that advance is number of 1/64 pixels)
-        x += (ch.Advance >> 6) * scale; // bitshift by 6 to get value in pixels (2^6 = 64 (divide amount of 1/64th pixels by 64 to get amount of pixels))
+        x += (ch.Advance >> 6) * scale * g_fontMatrixScaleCur; // bitshift by 6 to get value in pixels (2^6 = 64 (divide amount of 1/64th pixels by 64 to get amount of pixels))
     }
     glBindVertexArray(0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+// render line of text
+// -------------------
+void RenderTextSingleTexture(Shader &shader, std::wstring text, int x, int y, float scale, glm::vec3 color, FT_Face face)
+{
+    if (text.empty())
+        return;
+    textTextureInfo &texInfo = wstringToTextureMap[text];
+    if (texInfo.textureID == 0 || CharacterBuffers.empty())
+    {
+        // iterate through all CharacterBuffers
+        texInfo.width = 0;
+        texInfo.height = 0;
+        int advanceX = 0;
+        int advanceY = 0;
+        for (std::wstring::const_iterator c = text.begin(); c != text.end(); c++) 
+        {
+            auto it = CharacterBuffers.find(*c);
+            if (it == CharacterBuffers.end())
+                addCharBufferMapFromFreeType(face, *c, FT_LOAD_RENDER);
+            CharacterBuffer &ch = CharacterBuffers[*c];
+            int h = ch.Size.y;
+            int bottom_h = h - ch.Bearing.y;
+            advanceY = glm::max(advanceY, h - bottom_h);
+        }
+        int xChar = 0;
+        std::vector<int> xIntervalVec;
+        for (std::wstring::const_iterator c = text.begin(); c != text.end(); c++) 
+        {
+            CharacterBuffer &ch = CharacterBuffers[*c];
+            int h = ch.Size.y;
+            int xpos = xChar + ch.Bearing.x;
+            int advanceXtemp = 0;
+            if (xpos < 0)
+            {
+                advanceXtemp = - xpos;
+                advanceX += advanceXtemp;
+            }
+            int bottom_h = h - ch.Bearing.y;
+            int ypos = advanceY - h + bottom_h;
+            // bitshift by 6 to get value in pixels (2^6 = 64 (divide amount of 1/64th pixels by 64 to get amount of pixels))
+            int xInterval = (ch.Advance >> 6) * g_fontMatrixScaleCur;
+            xIntervalVec.push_back(xInterval);
+            xChar += (xInterval + advanceXtemp);
+            texInfo.height = glm::max(texInfo.height, ypos + h);
+        }
+        texInfo.width = xChar;
+        texInfo.dx = -advanceX;
+        // generate a blank texture
+        std::vector<unsigned char> pixels(texInfo.width * texInfo.height);//空白的背景图片
+        // 生成一个纹理对象
+        if (texInfo.textureID == 0)
+            glGenTextures(1, &texInfo.textureID);
+        // 绑定生成的纹理对象
+        glBindTexture(GL_TEXTURE_2D, texInfo.textureID);
+        // 分配内存并传递图像数据
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, texInfo.width, texInfo.height, 0, GL_RED, GL_UNSIGNED_BYTE, pixels.data());
+
+        // 设置纹理参数
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        xChar = advanceX;
+        int i = 0;
+        for (std::wstring::const_iterator c = text.begin(); c != text.end(); c++, i++) 
+        {
+            CharacterBuffer &ch = CharacterBuffers[*c];
+            int w = ch.Size.x;
+            int h = ch.Size.y;
+            int xpos = xChar + ch.Bearing.x;
+            int bottom_h = h - ch.Bearing.y;
+            int ypos = advanceY - h + bottom_h;
+            
+            // now advance cursors for next glyph (note that advance is number of 1/64 pixels)
+            int xInterval = xIntervalVec[i];
+            xChar += xInterval;
+            glTexSubImage2D(GL_TEXTURE_2D, 0, xpos, ypos, w, h, GL_RED, GL_UNSIGNED_BYTE, ch.bitmap.data());
+        }
+    }
+    float w = texInfo.width * scale;
+    float h = texInfo.height * scale;
+    x += texInfo.dx;
+    float vertices[6][4] = {
+            { x,     y + h,   0.0f, 0.0f },            
+            { x,     y,       0.0f, 1.0f },
+            { x + w, y,       1.0f, 1.0f },
+
+            { x,     y + h,   0.0f, 0.0f },
+            { x + w, y,       1.0f, 1.0f },
+            { x + w, y + h,   1.0f, 0.0f }           
+        };
+    // render glyph texture over quad
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texInfo.textureID);
+    // render quad
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices); // be sure to use glBufferSubData and not glBufferData
+    shader.use();
+    glUniform3f(glGetUniformLocation(shader.ID, "textColor"), color.x, color.y, color.z);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -340,12 +537,33 @@ Character getCharFromFreeType(FT_Face face,
         texture,
         glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
         glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
-        static_cast<unsigned int>(face->glyph->advance.x)
+        static_cast<unsigned int>(face->glyph->metrics.horiAdvance)
     };
     Characters.insert(std::pair<FT_ULong, Character>(c, character));
     return character;
 }
 
+void addCharBufferMapFromFreeType(FT_Face face,
+                                     FT_ULong c,
+                                     FT_Int32 load_flags)
+{
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    if (FT_Load_Char(face, c, load_flags))
+    {
+        std::cout << "ERROR::getCharFromFreeType: Failed to load Glyph" << std::endl;
+        return;
+    }
+    // now store character buffer for later use
+    unsigned int bufferSize = face->glyph->bitmap.width * face->glyph->bitmap.rows;
+    CharacterBuffer character;
+    character.bitmap.resize(bufferSize);
+    memcpy(character.bitmap.data(), face->glyph->bitmap.buffer, bufferSize);
+    character.Size = glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows);
+    character.Bearing = glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top);
+    character.Advance = static_cast<unsigned int>(face->glyph->metrics.horiAdvance);
+
+    CharacterBuffers.insert(std::pair<FT_ULong, CharacterBuffer>(c, character));
+}
 std::vector<std::string> getFileNames(std::string path)
 {
     std::vector<std::string> files;
@@ -370,4 +588,16 @@ std::vector<std::string> getFileNames(std::string path)
         std::cout << fileCur << "\n";
     }*/
     return files;
+}
+
+std::wstring utf8_to_wstring(const std::string &utf8_str)
+{
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+    return converter.from_bytes(utf8_str);
+}
+
+std::string wstring_to_utf8(const std::wstring &wstr)
+{
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+    return converter.to_bytes(wstr);
 }
