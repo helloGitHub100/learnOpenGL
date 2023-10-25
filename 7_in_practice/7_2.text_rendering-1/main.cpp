@@ -216,6 +216,12 @@ int main()
                 FT_Done_Face(face);
             Characters.clear();
             CharacterBuffers.clear();
+            for (auto it = wstringToTextureMap.begin(); it != wstringToTextureMap.end(); ++it)
+            {
+                textTextureInfo &texInfo = it->second;
+                glDeleteTextures(1, &texInfo.textureID);
+            }
+            wstringToTextureMap.clear();
             if (FT_New_Face(ft, font_name.c_str(), 0, &face))
             {
                 std::cout << "ERROR::FREETYPE: Failed to load font" << std::endl;
@@ -261,7 +267,7 @@ int main()
 
         int length = strcspn(g_inputText.c_str(), "\0");
         std::string inputTextTemp = g_inputText.substr(0, length);
-        RenderTextSingleTexture(shader, utf8_to_wstring(inputTextTemp), 25, 400, g_fontScale, glm::vec3(0.8, 0.5f, 0.2f), face);
+        RenderTextSingleTexture(shader, utf8_to_wstring(inputTextTemp), 50, 400, g_fontScale, glm::vec3(0.8, 0.5f, 0.2f), face);
        
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -426,6 +432,7 @@ void RenderTextSingleTexture(Shader &shader, std::wstring text, int x, int y, fl
         for (std::wstring::const_iterator c = text.begin(); c != text.end(); c++) 
         {
             CharacterBuffer &ch = CharacterBuffers[*c];
+            int w = ch.Size.x;
             int h = ch.Size.y;
             int xpos = xChar + ch.Bearing.x;
             int advanceXtemp = 0;
@@ -440,6 +447,9 @@ void RenderTextSingleTexture(Shader &shader, std::wstring text, int x, int y, fl
             int xInterval = (ch.Advance >> 6) * g_fontMatrixScaleCur;
             xIntervalVec.push_back(xInterval);
             xChar += (xInterval + advanceXtemp);
+            int dw = w - (xInterval + advanceXtemp);
+            if (dw > 0)
+                xChar += dw;
             texInfo.height = glm::max(texInfo.height, ypos + h);
         }
         texInfo.width = xChar;
