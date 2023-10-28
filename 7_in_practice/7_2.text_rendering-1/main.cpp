@@ -62,7 +62,6 @@ struct textTextureInfo
     int dx = 0;
 };
 
-
 Character getCharFromFreeType(FT_Face face,
                               FT_ULong c,
                               FT_Int32 load_flags);
@@ -77,8 +76,16 @@ std::map<std::wstring, textTextureInfo> wstringToTextureMap;
 
 unsigned int VAO, VBO;
 
+enum SDF_Mode
+{
+    SDF_Mode_Close,
+    SDF_Mode_Soft_Edges,
+    SDF_Mode_Hard_Edges,
+    SDF_Mode_Shadow,
+    SDF_Mode_Outline
+};
+
 // imGui Params
-bool g_bCaptureCursor = true;
 int g_fileIndex = 0;
 int g_fontHeight = 48;
 int g_fontHeightCur = 0;
@@ -89,6 +96,13 @@ float g_fontMatrixAngle = 0.0f;
 float g_fontMatrixAngleCur = 0.0f;
 bool g_bBlend = true;
 std::string g_inputText;
+glm::vec2 g_minmax1 = glm::vec2(0.4f, 0.5f);
+glm::vec2 g_minmax2 = glm::vec2(0.4f, 0.5f);
+glm::vec3 g_outlineColor = glm::vec3(0.0f, 0.0f, 0.0f);
+glm::vec2 g_pixel_offset = glm::vec2(-10.0f, -7.3f);
+int g_sdfMode = SDF_Mode_Close;
+int g_sdfModeCur = SDF_Mode_Close;
+float g_hardEdgeMin = 0.01f;
 
 int main()
 {
@@ -132,6 +146,10 @@ int main()
     // compile and setup the shader
     // ----------------------------
     Shader shader(VERTEX_FILE, FRAGMENT_FILE);
+    Shader shaderSDF_SoftEdges(VERTEX_FILE, FRAGMENT_SDF_SOFT_EDGES_FILE);
+    Shader shaderSDF_HardEdges(VERTEX_FILE, FRAGMENT_SDF_HARD_EDGES_FILE);
+    Shader shaderSDF_Shadow(VERTEX_FILE, FRAGMENT_SDF_SHADOW_FILE);
+    Shader shaderSDF_Outline(VERTEX_FILE, FRAGMENT_SDF_OUTLINE_FILE);
 
     // FreeType
     // --------
@@ -203,12 +221,14 @@ int main()
         if ((g_fileIndex < fontFiles.size() && fontFileNameCurrent != fontFiles[g_fileIndex]) ||
         g_fontHeight != g_fontHeightCur ||
         g_fontMatrixScale != g_fontMatrixScaleCur ||
-        g_fontMatrixAngle != g_fontMatrixAngleCur)
+        g_fontMatrixAngle != g_fontMatrixAngleCur ||
+        g_sdfModeCur != g_sdfMode)
         {
             g_fontHeightCur = g_fontHeight;
             fontFileNameCurrent = fontFiles[g_fileIndex];
             g_fontMatrixScaleCur = g_fontMatrixScale;
             g_fontMatrixAngleCur = g_fontMatrixAngle;
+            g_sdfModeCur = g_sdfMode;
 
             font_name = RESOURCES_DIR"/fonts/" + fontFileNameCurrent;
             //std::cout << "Debug: " << fontFileNameCurrent << std::endl;
@@ -255,28 +275,58 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT);
 
         glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT));
-        shader.use();
-        glUniformMatrix4fv(glGetUniformLocation(shader.ID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+        Shader *ShaderTemp = &shader;
+        if (g_sdfModeCur == SDF_Mode_Close)
+        {
+            ShaderTemp = &shader;
+            ShaderTemp->use();
+        }
+        else if (g_sdfModeCur == SDF_Mode_Soft_Edges)
+        {
+            ShaderTemp = &shaderSDF_SoftEdges;
+            ShaderTemp->use();
+            ShaderTemp->setVec2("MinMax", g_minmax1);
+        }
+        else if (g_sdfModeCur == SDF_Mode_Hard_Edges)
+        {
+            ShaderTemp = &shaderSDF_HardEdges;
+            ShaderTemp->use();
+            ShaderTemp->setVec2("MinMax", g_minmax1);
+            ShaderTemp->setFloat("hardEdgeMin", g_hardEdgeMin);
+        }
+        else if (g_sdfModeCur == SDF_Mode_Shadow)
+        {
+            ShaderTemp = &shaderSDF_Shadow;
+            ShaderTemp->use();
+            ShaderTemp->setVec2("MinMax", g_minmax1);
+            ShaderTemp->setVec2("MinMax_shadow", g_minmax2);
+            ShaderTemp->setVec2("uv_Offset", g_pixel_offset);
+            ShaderTemp->setVec3("shadowColor", g_outlineColor);
+        }
+        else if (g_sdfModeCur == SDF_Mode_Outline)
+        {
+            ShaderTemp = &shaderSDF_Outline;
+            ShaderTemp->use();
+            ShaderTemp->setVec2("outsideMinMax", g_minmax1);
+        }
+        ShaderTemp->setMat4("projection", projection);
 
         float t0 = static_cast<float>(glfwGetTime());
-        RenderText(shader, L"Oh my god! 你好，世界！", 25.0f, float(g_fontHeightCur), g_fontScale, glm::vec3(0.5, 0.8f, 0.2f), face);
+        RenderText(*ShaderTemp, L"Oh my god! 你好，世界！", 25.0f, float(g_fontHeightCur), g_fontScale, glm::vec3(0.5, 0.8f, 0.2f), face);
         float t1 = static_cast<float>(glfwGetTime());
-        RenderTextSingleTexture(shader, L"Oh my god! 你好，世界！", 25, g_fontHeightCur + g_fontHeightCur * g_fontScale * g_fontMatrixScaleCur, g_fontScale, glm::vec3(0.5, 0.8f, 0.2f), face);
+        RenderTextSingleTexture(*ShaderTemp, L"Oh my god! 你好，世界！", 25, g_fontHeightCur + g_fontHeightCur * g_fontScale * g_fontMatrixScaleCur, g_fontScale, glm::vec3(0.5, 0.8f, 0.2f), face);
         float t2 = static_cast<float>(glfwGetTime());
-        RenderText(shader, L"(C) LearnOpenGL.com", 540.0f, 570.0f, 0.5f, glm::vec3(0.3, 0.7f, 0.9f), face);
+        RenderText(*ShaderTemp, L"(C) LearnOpenGL.com", 540.0f, 570.0f, 0.5f, glm::vec3(0.3, 0.7f, 0.9f), face);
 
         int length = strcspn(g_inputText.c_str(), "\0");
         std::string inputTextTemp = g_inputText.substr(0, length);
-        RenderTextSingleTexture(shader, utf8_to_wstring(inputTextTemp), 50, 400, g_fontScale, glm::vec3(0.8, 0.5f, 0.2f), face);
+        RenderTextSingleTexture(*ShaderTemp, utf8_to_wstring(inputTextTemp), 50, 400, g_fontScale, glm::vec3(0.8, 0.5f, 0.2f), face);
        
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
         ImGui::Begin("Param Setting");
-        ImGui::Text("Press \"1\" to show cursor and switch to setting mode.");
-        ImGui::Text("Press \"2\" to hide cursor and finishe setting mode.");
-        ImGui::Text("Current cursor mode: %d", g_bCaptureCursor ? 2 : 1);
         ImGui::Combo("Font files", &g_fileIndex, fontFilesChar.data(), fontFiles.size());
         if (ImGui::Button("Update file list"))
         {
@@ -296,9 +346,40 @@ int main()
         }
         ImGui::SliderInt("Font height", &g_fontHeight, 8, 1000);
         ImGui::SliderFloat("Font scale", &g_fontScale, 0.1f, 20.0f, "%.1f");
-        ImGui::SliderFloat("Font transform scale", &g_fontMatrixScale, 0.1f, 20.0f, "%.1f");
+        ImGui::SliderFloat("Font transform scale", &g_fontMatrixScale, -20.0f, 20.0f, "%.1f");
         ImGui::SliderFloat("Font transform angle", &g_fontMatrixAngle, -180.0f, 180.0f, "%.1f");
         ImGui::Checkbox("Blend", &g_bBlend);
+        ImGui::RadioButton("Normal", &g_sdfMode, SDF_Mode_Close);
+        ImGui::RadioButton("Soft edges", &g_sdfMode, SDF_Mode_Soft_Edges);
+        ImGui::RadioButton("Hard edges", &g_sdfMode, SDF_Mode_Hard_Edges);
+        ImGui::RadioButton("Shadow/Outer glow", &g_sdfMode, SDF_Mode_Shadow);
+        ImGui::RadioButton("Outline", &g_sdfMode, SDF_Mode_Outline);
+        if (g_sdfModeCur == SDF_Mode_Soft_Edges)
+        {
+            ImGui::SliderFloat("smoothstep min", &g_minmax1.x, 0.0f, g_minmax1.y, "%.2f");
+            ImGui::SliderFloat("smoothstep max", &g_minmax1.y, g_minmax1.x, 1.0f, "%.2f");
+        }
+        else if (g_sdfModeCur == SDF_Mode_Hard_Edges)
+        {
+            ImGui::SliderFloat("smoothstep min", &g_minmax1.x, 0.0f, g_minmax1.y, "%.2f");
+            ImGui::SliderFloat("smoothstep max", &g_minmax1.y, g_minmax1.x, 1.0f, "%.2f");
+            ImGui::SliderFloat("Hard edge min", &g_hardEdgeMin, 0.01f, 1.0f, "%.2f");
+        }
+        else if (g_sdfModeCur == SDF_Mode_Shadow)
+        {
+            ImGui::SliderFloat("smoothstep min1", &g_minmax1.x, 0.0f, g_minmax1.y, "%.2f");
+            ImGui::SliderFloat("smoothstep max1", &g_minmax1.y, g_minmax1.x, 1.0f, "%.2f");
+            ImGui::SliderFloat("smoothstep min2", &g_minmax2.x, 0.0f, g_minmax2.y, "%.2f");
+            ImGui::SliderFloat("smoothstep max2", &g_minmax2.y, g_minmax2.x, 1.0f, "%.2f");
+            ImGui::SliderFloat2("UV Offset", &g_pixel_offset.x, -100.0f, 100.0f, "%.0f");
+            ImGui::ColorEdit3("Shadow color", &g_outlineColor.r);
+        }
+        else if (g_sdfModeCur == SDF_Mode_Outline)
+        {
+            ImGui::SliderFloat("step min", &g_minmax1.x, 0.0f, g_minmax1.y, "%.2f");
+            ImGui::SliderFloat("step max", &g_minmax1.y, g_minmax1.x, 1.0f, "%.2f");
+        }
+        
         ImGui::PushID("InputText"); // 将字符串作为ID推入栈
         ImGui::InputText(wstring_to_utf8(L"输入框").c_str(), g_inputText.data(), g_inputText.size());
         ImGui::PopID(); // 弹出ID
@@ -306,7 +387,11 @@ int main()
         float dt01 = (t1 - t0) * 100000.0f;
         float dt12 = (t2 - t1) * 100000.0f;
         ImGui::Text("Render Text with a texture %.3f e-05 ms", dt12);
+        if (dt12 > 100.0f)
+            printf_s("Render Text with a texture %.3f e-05 ms\n", dt12);
         ImGui::Text("Render Text separately %.3f e-05 ms", dt01);
+        if (dt01 > 100.0f)
+            printf_s("Render Text separately %.3f e-05 ms\n", dt01);
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 
         ImGui::End();
@@ -347,7 +432,6 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     SCR_HEIGHT = height;
 }
 
-
 // render line of text
 // -------------------
 void RenderText(Shader &shader, std::wstring text, float x, float y, float scale, glm::vec3 color, FT_Face face)
@@ -355,7 +439,6 @@ void RenderText(Shader &shader, std::wstring text, float x, float y, float scale
     if (text.empty())
         return;
     // activate corresponding render state	
-    shader.use();
     glUniform3f(glGetUniformLocation(shader.ID, "textColor"), color.x, color.y, color.z);
     glActiveTexture(GL_TEXTURE0);
     glBindVertexArray(VAO);
@@ -371,8 +454,8 @@ void RenderText(Shader &shader, std::wstring text, float x, float y, float scale
         {
             ch = getCharFromFreeType(face, *c, FT_LOAD_RENDER);
         }
-
-        float xpos = x + ch.Bearing.x * scale;
+        int xposChar = ch.Bearing.x * scale;
+        float xpos = x + xposChar;
         float ypos = y - (ch.Size.y - ch.Bearing.y) * scale;
 
         float w = ch.Size.x * scale;
@@ -397,7 +480,11 @@ void RenderText(Shader &shader, std::wstring text, float x, float y, float scale
         // render quad
         glDrawArrays(GL_TRIANGLES, 0, 6);
         // now advance cursors for next glyph (note that advance is number of 1/64 pixels)
-        x += (ch.Advance >> 6) * scale * g_fontMatrixScaleCur; // bitshift by 6 to get value in pixels (2^6 = 64 (divide amount of 1/64th pixels by 64 to get amount of pixels))
+        int xInterval = (ch.Advance >> 6) * scale * g_fontMatrixScaleCur; // bitshift by 6 to get value in pixels (2^6 = 64 (divide amount of 1/64th pixels by 64 to get amount of pixels))
+        int dw = w - (xInterval - xposChar);
+        if (dw > 0)
+            xInterval += dw;
+        x += xInterval;
     }
     glBindVertexArray(0);
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -434,6 +521,7 @@ void RenderTextSingleTexture(Shader &shader, std::wstring text, int x, int y, fl
             CharacterBuffer &ch = CharacterBuffers[*c];
             int w = ch.Size.x;
             int h = ch.Size.y;
+            int xposChar = ch.Bearing.x;
             int xpos = xChar + ch.Bearing.x;
             int advanceXtemp = 0;
             if (xpos < 0)
@@ -445,11 +533,12 @@ void RenderTextSingleTexture(Shader &shader, std::wstring text, int x, int y, fl
             int ypos = advanceY - h + bottom_h;
             // bitshift by 6 to get value in pixels (2^6 = 64 (divide amount of 1/64th pixels by 64 to get amount of pixels))
             int xInterval = (ch.Advance >> 6) * g_fontMatrixScaleCur;
+            int dw = w - (xInterval - xposChar);
+            if (dw > 0)
+                xInterval += dw;
+            //xInterval *= g_fontMatrixScaleCur;
             xIntervalVec.push_back(xInterval);
             xChar += (xInterval + advanceXtemp);
-            int dw = w - (xInterval + advanceXtemp);
-            if (dw > 0)
-                xChar += dw;
             texInfo.height = glm::max(texInfo.height, ypos + h);
         }
         texInfo.width = xChar;
@@ -487,7 +576,7 @@ void RenderTextSingleTexture(Shader &shader, std::wstring text, int x, int y, fl
     }
     float w = texInfo.width * scale;
     float h = texInfo.height * scale;
-    x += texInfo.dx;
+    x += texInfo.dx * scale;
     float vertices[6][4] = {
             { x,     y + h,   0.0f, 0.0f },            
             { x,     y,       0.0f, 1.0f },
@@ -504,7 +593,6 @@ void RenderTextSingleTexture(Shader &shader, std::wstring text, int x, int y, fl
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices); // be sure to use glBufferSubData and not glBufferData
-    shader.use();
     glUniform3f(glGetUniformLocation(shader.ID, "textColor"), color.x, color.y, color.z);
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindVertexArray(0);
@@ -522,6 +610,9 @@ Character getCharFromFreeType(FT_Face face,
         std::cout << "ERROR::getCharFromFreeType: Failed to load Glyph" << std::endl;
         return Character();
     }
+    if (g_sdfModeCur != SDF_Mode_Close)
+        FT_Render_Glyph(face->glyph, FT_RENDER_MODE_SDF);
+    
     // generate texture
     unsigned int texture;
     glGenTextures(1, &texture);
@@ -563,6 +654,8 @@ void addCharBufferMapFromFreeType(FT_Face face,
         std::cout << "ERROR::getCharFromFreeType: Failed to load Glyph" << std::endl;
         return;
     }
+    if (g_sdfModeCur != SDF_Mode_Close)
+        FT_Render_Glyph(face->glyph, FT_RENDER_MODE_SDF);
     // now store character buffer for later use
     unsigned int bufferSize = face->glyph->bitmap.width * face->glyph->bitmap.rows;
     CharacterBuffer character;
