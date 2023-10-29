@@ -1,0 +1,22 @@
+{
+    "name": "learnopengl",
+    "version": "0.1.0",
+    "dependencies": [
+      "glfw3",
+      {
+        "name": "glad",
+        "features": ["gl-api-43"]
+      },
+      "assimp",
+      "imgui",
+      {
+        "name": "imgui",
+        "features": ["glfw-binding"]
+      },
+      {
+        "name": "imgui",
+        "features": ["opengl3-binding"]
+      },
+      "freetype"
+    ]
+  }
