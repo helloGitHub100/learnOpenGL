@@ -17,6 +17,7 @@
         "name": "imgui",
         "features": ["opengl3-binding"]
       },
-      "freetype"
+      "freetype",
+      "box2d"
     ]
   }

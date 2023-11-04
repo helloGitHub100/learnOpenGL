@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.0.0)
 project(LearnOpenGL VERSION 0.1.0)
-message(STATUS "project= ${PROJECT_NAME}" )
+
 include(CTest)
 enable_testing()
 
@@ -24,8 +24,9 @@ find_package(glad CONFIG REQUIRED)
 find_package(assimp CONFIG REQUIRED)
 find_package(imgui CONFIG REQUIRED)
 find_package(Freetype REQUIRED)
+find_package(box2d CONFIG REQUIRED)
 
-link_libraries(glfw glad::glad assimp::assimp imgui::imgui Freetype::Freetype)
+link_libraries(glfw glad::glad assimp::assimp imgui::imgui Freetype::Freetype box2d::box2d)
 
 set(Include_Common_Dir ${CMAKE_CURRENT_SOURCE_DIR}/includes/)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Shader/)

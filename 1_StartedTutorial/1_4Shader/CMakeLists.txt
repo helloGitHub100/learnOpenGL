@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.0.0)
 
-project (1_4Shader C CXX)#修改1：修改为对应文件名
-message(STATUS "project= ${PROJECT_NAME}" )
+set(NAME 1_4Shader)#修改1：修改为对应文件名
 
-add_executable(${PROJECT_NAME} main.cpp)
+
+add_executable(${NAME} main.cpp)

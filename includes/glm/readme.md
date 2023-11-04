@@ -448,7 +448,7 @@ glm::mat4 camera(float Translate, glm::vec2 const & Rotate)
 - Fixed angle and orientedAngle that sometimes return NaN values (#145)
 - Deprecated degrees for function parameters and display a message
 - Added possible static_cast conversion of GLM types (#72)
-- Fixed error 'inverse' is not a member of 'glm' from glm::unProject (#146)
+- Fixed error 'inverse' is not a member of 'glm' from glm::unset(NAME #146)
 - Fixed mismatch between some declarations and definitions
 - Fixed inverse link error when using namespace glm; (#147)
 - Optimized matrix inverse and division code (#149)

@@ -27,6 +27,8 @@ vcpkg install imgui[glfw-binding]:x64-windows --recurse
 vcpkg install imgui[opengl3-binding]:x64-windows --recurse
 #### 安装FreeType
 vcpkg install freetype:x64-windows
+#### 安装box2d
+vcpkg install box2d:x64-windows
 
 #### 安装vs编译工具包（编译器、生成器、cmake）
 
@@ -64,3 +66,15 @@ export VCPKG_ROOT=/path/to/vcpkgPath/vcpkg
 打开终端，执行命令```sudo vcpkg install glfw3:x64-linux```
 #### 安装glad
 打开终端，执行命令```sudo vcpkg install glad[gl-api-43]:x64-linux```
+#### 安装assimp
+打开终端，执行命令```sudo vcpkg install assimp:x64-linux```
+#### 安装imGui
+打开终端，执行命令```sudo vcpkg install imgui:x64-linux```
+```shell
+sudo vcpkg install imgui[glfw-binding]:x64-linux --recurse
+sudo vcpkg install imgui[opengl3-binding]:x64-linux --recurse
+```
+#### 安装FreeType
+打开终端，执行命令```sudo vcpkg install freetype:x64-linux```
+#### 安装box2d
+打开终端，执行命令```sudo vcpkg install box2d:x64-linux```
