@@ -326,7 +326,9 @@ int main()
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::Begin("Param Setting");
+        ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH, 0.0f));
+        ImGui::SetNextWindowSize(ImVec2(ImGui_Width - 10, SCR_HEIGHT - 10));
+        ImGui::Begin("Param Setting", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
         ImGui::Combo("Font files", &g_fileIndex, fontFilesChar.data(), fontFiles.size());
         if (ImGui::Button("Update file list"))
         {
