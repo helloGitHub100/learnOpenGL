@@ -25,8 +25,10 @@ find_package(assimp CONFIG REQUIRED)
 find_package(imgui CONFIG REQUIRED)
 find_package(Freetype REQUIRED)
 find_package(box2d CONFIG REQUIRED)
+find_package(portaudio CONFIG REQUIRED)
+find_package(SndFile CONFIG REQUIRED)
 
-link_libraries(glfw glad::glad assimp::assimp imgui::imgui Freetype::Freetype box2d::box2d)
+link_libraries(glfw glad::glad assimp::assimp imgui::imgui Freetype::Freetype box2d::box2d portaudio SndFile::sndfile)
 
 set(Include_Common_Dir ${CMAKE_CURRENT_SOURCE_DIR}/includes/)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Shader/)

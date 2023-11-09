@@ -29,6 +29,10 @@ vcpkg install imgui[opengl3-binding]:x64-windows --recurse
 vcpkg install freetype:x64-windows
 #### 安装box2d
 vcpkg install box2d:x64-windows
+#### 安装portaudio
+portaudio:x64-windows
+#### 安装libsndfile
+vcpkg install libsndfile:x64-windows
 
 #### 安装vs编译工具包（编译器、生成器、cmake）
 
