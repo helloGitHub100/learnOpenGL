@@ -18,6 +18,8 @@
         "features": ["opengl3-binding"]
       },
       "freetype",
-      "box2d"
+      "box2d",
+      "portaudio",
+      "libsndfile"
     ]
   }

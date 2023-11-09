@@ -10,51 +10,31 @@ class AudioEngine
 public:
     AudioEngine(const char* filePath)
     {
-        PaError err;
-        if (!s_bInited)
+        m_filePath = filePath;
+        constructFunc();
+    }
+    // 拷贝构造函数
+    AudioEngine(const AudioEngine& other)
+    {
+        m_filePath = other.m_filePath;
+        m_bLoop = other.m_bLoop;
+        constructFunc();
+    }
+    // =运算符
+    AudioEngine& operator=(const AudioEngine& other)
+    {
+        if (this!= &other)
         {
-            std::lock_guard<std::mutex> lock(s_mutex);
-            // Initialize PortAudio
-            err = Pa_Initialize();
-            if (err != paNoError)
-            {
-                std::cerr << "[AudioEngine::AudioEngine] PortAudio error: " << Pa_GetErrorText(err) << std::endl;
-                return;
-            }
-            s_bInited = true;
-            s_numInstances++;
+            m_filePath = other.m_filePath;
+            m_bLoop = other.m_bLoop;
+            constructFunc();
         }
-
-        // Open the audio file using libsndfile
-        SF_INFO sfInfo;
-        m_pAudioFile = sf_open(filePath, SFM_READ, &sfInfo);
-        if (!m_pAudioFile)
-        {
-            std::cerr << "[AudioEngine::AudioEngine] Failed to open audio file" << std::endl;
-            return;
-        }
-
-        // Set up PortAudio stream parameters
-        PaStreamParameters outputParameters;
-        outputParameters.device = Pa_GetDefaultOutputDevice();
-        outputParameters.channelCount = sfInfo.channels;
-        outputParameters.sampleFormat = paFloat32;
-        outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
-        outputParameters.hostApiSpecificStreamInfo = nullptr;
-
-        // Open the PortAudio stream
-        err = Pa_OpenStream(&m_stream, nullptr, &outputParameters, sfInfo.samplerate, paFramesPerBufferUnspecified,
-                            paClipOff, AudioEngine::audioCallback, this);
-        if (err != paNoError)
-        {
-            std::cerr << "[AudioEngine::AudioEngine] PortAudio error: " << Pa_GetErrorText(err) << std::endl;
-            return;
-        }
+        return *this;
     }
 
     ~AudioEngine()
     {
-        PaError err = Pa_CloseStream(m_stream);
+        PaError err = Pa_CloseStream(m_pStream);
         if (err != paNoError)
             std::cerr << "PortAudio error: " << Pa_GetErrorText(err) << std::endl;
         // Close the audio file
@@ -77,21 +57,30 @@ public:
 
     PaError start(bool bLoop = false)
     {
-        if (Pa_IsStreamActive(m_stream) || m_hasStarted)
-            stop();
+        //double  t0 = glfwGetTime() * 1000;
+        if (Pa_IsStreamActive(m_pStream) || m_hasStarted)
+        {
+            //不用stop是因为耗时太长，会造成卡顿
+            PaError err = Pa_AbortStream(m_pStream);
+            if (err!= paNoError)
+                std::cerr << "[AudioEngine::start] Pa_AbortStream error: " << Pa_GetErrorText(err) << std::endl;
+        }
         sf_seek(m_pAudioFile, 0, SEEK_SET);
+        //double  t1 = glfwGetTime() * 1000;
         m_hasStarted = true;
         m_bLoop = bLoop;
         // Start the audio stream
-        PaError err = Pa_StartStream(m_stream);
+        PaError err = Pa_StartStream(m_pStream);
         if (err != paNoError)
             std::cerr << "[AudioEngine::start] PortAudio error: " << Pa_GetErrorText(err) << std::endl;
+        //double  t2 = glfwGetTime() * 1000;
+        //std::cout << "start: " << t1 - t0 << "ms, open: " << t2 - t1 << "ms" << "total time:" << t2 - t0 << std::endl;
         return err;
     }
 
     PaError stop()
     {
-        PaError err = Pa_StopStream(m_stream);
+        PaError err = Pa_StopStream(m_pStream);
         if (err != paNoError)
             std::cerr << "[AudioEngine::stop] PortAudio error: " << Pa_GetErrorText(err) << std::endl;
         m_hasStarted = false;
@@ -100,7 +89,7 @@ public:
 
     bool isActive()
     {
-        return Pa_IsStreamActive(m_stream);
+        return Pa_IsStreamActive(m_pStream);
     }
 
     static int audioCallback(const void *inputBuffer, void *outputBuffer,
@@ -139,14 +128,60 @@ public:
 
         return paContinue;
     }
+private:
+    PaError constructFunc()
+    {
+        PaError err;
+        if (!s_bInited)
+        {
+            std::lock_guard<std::mutex> lock(s_mutex);
+            // Initialize PortAudio
+            err = Pa_Initialize();
+            if (err != paNoError)
+            {
+                std::cerr << "[AudioEngine::constructFunc] PortAudio error: " << Pa_GetErrorText(err) << std::endl;
+                return err;
+            }
+            s_bInited = true;
+        }
+        s_numInstances++;
+        // Open the audio file using libsndfile
+        SF_INFO sfInfo;
+        m_pAudioFile = sf_open(m_filePath.c_str(), SFM_READ, &sfInfo);
+        if (!m_pAudioFile)
+        {
+            std::cerr << "[AudioEngine::constructFunc] Failed to open audio file" << std::endl;
+            return err;
+        }
+
+        // Set up PortAudio stream parameters
+        PaStreamParameters outputParameters;
+        outputParameters.device = Pa_GetDefaultOutputDevice();
+        outputParameters.channelCount = sfInfo.channels;
+        outputParameters.sampleFormat = paFloat32;
+        outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
+        outputParameters.hostApiSpecificStreamInfo = nullptr;
+
+        // Open the PortAudio stream
+        err = Pa_OpenStream(&m_pStream, nullptr, &outputParameters, sfInfo.samplerate, paFramesPerBufferUnspecified,
+                            paClipOff, AudioEngine::audioCallback, this);
+        if (err != paNoError)
+        {
+            std::cerr << "[AudioEngine::constructFunc] PortAudio error: " << Pa_GetErrorText(err) << std::endl;
+            return err;
+        }
+
+        return err;
+    }
 
 private:
     static bool s_bInited;
     static int s_numInstances;
+    std::string m_filePath;
     std::mutex s_mutex;
     SNDFILE * m_pAudioFile;
     bool m_bLoop;
-    PaStream *m_stream;
+    PaStream *m_pStream;
     bool m_hasStarted = false;
 };
 bool AudioEngine::s_bInited = false;
