@@ -3,10 +3,9 @@
 #include <portaudio.h>
 #include <sndfile.h>
 
-#define FILE_PATH RESOURCES_DIR "/audio/powerup.wav" // powerup.wav breakout.mp3
+#define FILE_PATH RESOURCES_DIR"/audio/powerup.wav" // powerup.wav breakout.mp3
 
 bool g_bLoop = true;
-bool g_bKeyPressed = false;
 
 // Callback function to fill the audio buffer
 int audioCallback(const void *inputBuffer, void *outputBuffer,
