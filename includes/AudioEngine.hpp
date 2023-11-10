@@ -120,7 +120,7 @@ public:
             {
                 // If we've reached the end of the file, seek back to the beginning
                 sf_seek(file, 0, SEEK_SET);
-                std::cout << "[AudioEngine::audioCallback] Loop Playback...Playing audio. Press Enter to stop..." << std::endl;
+                std::cout << "[AudioEngine::audioCallback] Loop Playback...Playing audio." << std::endl;
             }
             else
                 return paComplete;
