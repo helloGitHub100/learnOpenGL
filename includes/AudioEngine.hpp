@@ -113,7 +113,7 @@ public:
             std::cerr << "[AudioEngine::audioCallback] Error reading from sound file! err: " << err << std::endl;
             return paAbort;
         }
-        if (count == 0)
+        if (count < numFrames)
         {
             std::cout << "[AudioEngine::audioCallback] Playback finished" << std::endl;
             if (engine->m_bLoop)
