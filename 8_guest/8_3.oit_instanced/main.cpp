@@ -73,7 +73,6 @@ int main(int argc, char* argv[])
 	// build and compile shaders
 	// -------------------------
 	Shader solidTexShader(VERTEX_SOLID_TEX_FILE, FRAGMENT_SOLID_TEX_FILE);
-	Shader transparentTexShader(VERTEX_TRANSPARENT_TEX_FILE, FRAGMENT_TRANSPARENT_TEX_FILE);
 	Shader transparentTexInstanceShader(VERTEX_TRANSPARENT_INSTANCE_FILE, FRAGMENT_TRANSPARENT_TEX_FILE);
 	Shader compositeShader(VERTEX_COMPOSITE_FILE, FRAGMENT_COMPOSITE_FILE);
 	Shader screenShader(VERTEX_SCREEN_FILE, FRAGMENT_SCREEN_FILE);
@@ -332,8 +331,6 @@ int main(int argc, char* argv[])
 	
 	solidTexShader.use();
 	solidTexShader.setInt("texture_diffuse1", 0);
-	transparentTexShader.use();
-	transparentTexShader.setInt("texture_diffuse1", 0);
 	transparentTexInstanceShader.use();
 	transparentTexInstanceShader.setInt("texture_diffuse1", 0);
 
