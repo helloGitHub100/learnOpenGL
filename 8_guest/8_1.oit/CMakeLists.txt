@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.0.0)
 
-set(NAME 8_oit)#修改1：修改为对应文件名
+set(NAME 8_1.oit)#修改1：修改为对应文件名
 
 add_compile_definitions(VERTEX_TRANSPARENT_FILE=\"${CMAKE_CURRENT_SOURCE_DIR}/transparent.vs\")
 add_compile_definitions(FRAGMENT_TRANSPARENT_FILE=\"${CMAKE_CURRENT_SOURCE_DIR}/transparent.fs\")
