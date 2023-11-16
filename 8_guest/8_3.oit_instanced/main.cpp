@@ -73,6 +73,7 @@ int main(int argc, char* argv[])
 	// build and compile shaders
 	// -------------------------
 	Shader solidTexShader(VERTEX_SOLID_TEX_FILE, FRAGMENT_SOLID_TEX_FILE);
+	Shader solidTexInstanceShader(VERTEX_TRANSPARENT_INSTANCE_FILE, FRAGMENT_SOLID_TEX_FILE);
 	Shader transparentTexInstanceShader(VERTEX_TRANSPARENT_INSTANCE_FILE, FRAGMENT_TRANSPARENT_TEX_FILE);
 	Shader compositeShader(VERTEX_COMPOSITE_FILE, FRAGMENT_COMPOSITE_FILE);
 	Shader screenShader(VERTEX_SCREEN_FILE, FRAGMENT_SCREEN_FILE);
@@ -331,6 +332,8 @@ int main(int argc, char* argv[])
 	
 	solidTexShader.use();
 	solidTexShader.setInt("texture_diffuse1", 0);
+	solidTexInstanceShader.use();
+	solidTexInstanceShader.setInt("texture_diffuse1", 0);
 	transparentTexInstanceShader.use();
 	transparentTexInstanceShader.setInt("texture_diffuse1", 0);
 
@@ -397,6 +400,13 @@ int main(int argc, char* argv[])
 		solidTexShader.use();
 		solidTexShader.setMat4("mvp", vp * planetModelMat);
 		planet.Draw(solidTexShader.ID);
+		// draw window frame instances
+		solidTexInstanceShader.use();
+		solidTexInstanceShader.setMat4("pv", vp);
+		glBindVertexArray(transparentVAO);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, transparentTexture);
+		glDrawArraysInstanced(GL_TRIANGLES, 0, 6, amount);
 
 		// draw transparent objects (transparent pass)
 		// -----

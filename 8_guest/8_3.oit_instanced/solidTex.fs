@@ -8,5 +8,9 @@ uniform sampler2D texture_diffuse1;
 
 void main()
 {
-	frag = texture(texture_diffuse1, TexCoords);
+	vec4 color = texture(texture_diffuse1, TexCoords);
+	// 如果allpha小于1，则不绘制该片元
+	if(color.a < 1)
+		discard;
+	frag = color;
 }
