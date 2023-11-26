@@ -5,6 +5,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#define STBI_WINDOWS_UTF8
 #include <stb_image.h>
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -154,6 +155,8 @@ private:
 
 	void SetVertexBoneData(Vertex& vertex, int boneID, float weight)
 	{
+		if (weight == 0.0f)
+			return;
 		for (int i = 0; i < MAX_BONE_INFLUENCE; ++i)
 		{
 			if (vertex.m_BoneIDs[i] < 0)

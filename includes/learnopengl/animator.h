@@ -59,7 +59,14 @@ public:
 		{
 			int index = boneInfoMap[nodeName].id;
 			glm::mat4 offset = boneInfoMap[nodeName].offset;
-			m_FinalBoneMatrices[index] = globalTransformation * offset;
+			if (index >= m_FinalBoneMatrices.size())
+			{
+				m_FinalBoneMatrices.push_back(globalTransformation * offset);
+				// output log
+				std::cout << "bone matrix size: " << m_FinalBoneMatrices.size() << std::endl;
+			}
+			else
+				m_FinalBoneMatrices[index] = globalTransformation * offset;
 		}
 
 		for (int i = 0; i < node->childrenCount; i++)
