@@ -91,8 +91,8 @@ int main()
 	
 	// load models
 	// -----------
-	Model ourModel(RESOURCES_DIR"/objects/babala/babala1.fbx");
-	Animation danceAnimation(RESOURCES_DIR"/objects/babala/babala1.fbx",&ourModel);
+	Model ourModel(RESOURCES_DIR"/objects/babala/babala.fbx");
+	Animation danceAnimation(RESOURCES_DIR"/objects/babala/babala.fbx",&ourModel);
 	Animator animator(&danceAnimation);
 	int numBones = animator.GetBoneCount();
 
@@ -186,8 +186,8 @@ int main()
 
 		// render the loaded model
 		glm::mat4 model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(-1.3f, -1.1f, -0.8f)); // translate it down so it's at the center of the scene
-		model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));	// it's a bit too big for our scene, so scale it down
+		model = glm::translate(model, glm::vec3(0.0f, -1.5f, -1.4f)); // translate it down so it's at the center of the scene
+		model = glm::scale(model, glm::vec3(0.02f, 0.02f, 0.02f));	// it's a bit too big for our scene, so scale it down
 		ourShader.setMat4("model", model);
 		ourModel.Draw(ourShader);
 
