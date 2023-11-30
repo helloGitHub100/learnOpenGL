@@ -79,6 +79,14 @@ public:
 		glm::mat4 scale = InterpolateScaling(animationTime);
 		m_LocalTransform = translation * rotation * scale;
 	}
+
+	glm::mat4 getLocalTransformByFrameIndex(float animationTime)
+	{
+		glm::mat4 translation = InterpolatePosition(animationTime);
+		glm::mat4 rotation = InterpolateRotation(animationTime);
+		glm::mat4 scale = InterpolateScaling(animationTime);
+		return translation * rotation * scale;
+	}
 	glm::mat4 GetLocalTransform() { return m_LocalTransform; }
 	std::string GetBoneName() const { return m_Name; }
 	int GetBoneID() { return m_ID; }
@@ -92,7 +100,9 @@ public:
 			if (animationTime < m_Positions[index + 1].timeStamp)
 				return index;
 		}
+		std::cout << "[Bone::GetPositionIndex] Frame index: " << animationTime << " not found" << std::endl;
 		assert(0);
+		return 0;;
 	}
 
 	int GetRotationIndex(float animationTime)

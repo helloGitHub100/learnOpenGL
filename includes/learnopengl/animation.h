@@ -34,6 +34,8 @@ public:
 		globalTransformation = globalTransformation.Inverse();
 		ReadHierarchyData(m_RootNode, scene->mRootNode);
 		ReadMissingBones(animation, *model);
+		int numBones = m_Bones.size();
+		std::cout << "Number of bones: " << numBones << std::endl;
 	}
 
 	~Animation()

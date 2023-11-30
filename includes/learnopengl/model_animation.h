@@ -155,16 +155,21 @@ private:
 
 	void SetVertexBoneData(Vertex& vertex, int boneID, float weight)
 	{
-		if (weight == 0.0f)
-			return;
+		bool isFound = false;
 		for (int i = 0; i < MAX_BONE_INFLUENCE; ++i)
 		{
 			if (vertex.m_BoneIDs[i] < 0)
 			{
 				vertex.m_Weights[i] = weight;
 				vertex.m_BoneIDs[i] = boneID;
+				isFound = true;
 				break;
 			}
+		}
+		if (!isFound)
+		{
+			//log
+			std::cout << "Too many bones on vertex,  boneID:" << boneID << " weight:" << weight  << std::endl;
 		}
 	}
 
