@@ -34,9 +34,13 @@ bool firstMouse = true;
 // timing
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
+float timePerFrame =0.0f;
 
 // animation control
 bool g_bStop = false;
+
+bool g_bCaptureCursor = true;
+GLFWwindow* window = nullptr;
 
 int main()
 {
@@ -53,7 +57,7 @@ int main()
 
 	// glfw window creation
 	// --------------------
-	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
+	window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
 	if (window == NULL)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
@@ -94,7 +98,7 @@ int main()
 	Model ourModel(RESOURCES_DIR"/objects/babala/babala.fbx");
 	Animation danceAnimation(RESOURCES_DIR"/objects/babala/babala.fbx",&ourModel);
 	Animator animator(&danceAnimation);
-	int numBones = animator.GetBoneCount();
+	int numBones = danceAnimation.GetBoneIDMap().size();
 
 	std::vector<float> pixelData(numBones * 16, 0.f);
 	unsigned int boneMatrixTexture;
@@ -111,14 +115,14 @@ int main()
 	ourShader.setInt("MAX_BONES", numBones);
 
 	// 计算每帧动画的时间间隔
-	float timePerFrame = 1.0 / animator.GetTicksPerSecond();
+	timePerFrame = 1.0 / danceAnimation.GetTicksPerSecond();
 
 	// std::vector<vector<glm::mat4>> boneMatricesAllFrames;
 	// float t1 = glfwGetTime();
 	// animator.getBoneMatricesForAllFrames(boneMatricesAllFrames);
 	// float t2 = glfwGetTime();
 	// cout << "Time for getBoneMatricesForAllFrames: " << t2 - t1 << endl;
-	// int numFrames = (int)animator.GetDuration();
+	// int numFrames = (int)danceAnimation.GetDuration();
 	// int frameIndex = -1;
 
 	// draw in wireframe
@@ -131,20 +135,20 @@ int main()
 		// per-frame time logic
 		// --------------------
 		float currentFrame = glfwGetTime();
-		deltaTime = currentFrame - lastFrame;
+		if (!g_bStop && deltaTime >= 0.0f)
+			deltaTime += (currentFrame - lastFrame);
 
 		// input
 		// -----
 		processInput(window);
-		if (g_bStop)
-			lastFrame = currentFrame;
-		else if (deltaTime >= timePerFrame)
+		if (deltaTime >= timePerFrame || deltaTime <= -timePerFrame)
 		{
 			animator.UpdateAnimation(deltaTime);
+			deltaTime = 0.0f;
 			// ++frameIndex;
 			// frameIndex = frameIndex % numFrames;
-			lastFrame = currentFrame;
 		}
+		lastFrame = currentFrame;
 		
 		// render
 		// ------
@@ -219,9 +223,12 @@ void processInput(GLFWwindow* window)
 		camera.ProcessKeyboard(LEFT, deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 		camera.ProcessKeyboard(RIGHT, deltaTime);
-	// 空格键
-	// if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-	// 	g_bStop =!g_bStop;
+	// "->" next frame
+	if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+		deltaTime += timePerFrame;
+	// "<-" previous frame
+	if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+		deltaTime = -timePerFrame;
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -237,6 +244,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 // -------------------------------------------------------
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
+	if (!g_bCaptureCursor)
+        return;
 	if (firstMouse)
 	{
 		lastX = xpos;
@@ -267,14 +276,13 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 	if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
 	{
 		g_bStop =!g_bStop;
-		//log
-		if (g_bStop)
-		{
-			std::cout << "stop" << std::endl;
-		}
-		else
-		{
-			std::cout << "start" << std::endl;
-		}
+	}
+	// "ctrl"
+	else if (key == GLFW_KEY_LEFT_CONTROL && action == GLFW_PRESS)
+	{
+		g_bCaptureCursor =!g_bCaptureCursor;
+		glfwSetInputMode(window, GLFW_CURSOR, g_bCaptureCursor ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
+		if (g_bCaptureCursor)
+			firstMouse = true;
 	}
 }

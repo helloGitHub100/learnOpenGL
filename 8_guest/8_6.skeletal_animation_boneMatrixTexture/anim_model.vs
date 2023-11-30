@@ -13,7 +13,7 @@ uniform mat4 view;
 uniform mat4 model;
 
 uniform int MAX_BONES = 200;
-const int MAX_BONE_INFLUENCE = 4;
+const int MAX_BONE_INFLUENCE = 5;
 uniform sampler2D boneMatrixImage;
 
 out vec2 TexCoords;
@@ -42,7 +42,7 @@ void main()
         mat4 boneMatrix = getBoneMatrix(boneIds[i]);
         vec4 localPosition = boneMatrix * vec4(pos,1.0f);
         totalPosition += localPosition * weights[i];
-        vec3 localNormal = mat3(boneMatrix) * norm;
+        //vec3 localNormal = mat3(boneMatrix) * norm;
    }
 	
     mat4 viewModel = view * model;

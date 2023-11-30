@@ -169,7 +169,7 @@ private:
 		if (!isFound)
 		{
 			//log
-			std::cout << "Too many bones on vertex,  boneID:" << boneID << " weight:" << weight  << std::endl;
+			std::cout << "The nunber of bones is more than MAX_BONE_INFLUENCE on vertex,  boneID:" << boneID << " weight:" << weight  << std::endl;
 		}
 	}
 

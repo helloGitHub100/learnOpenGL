@@ -12,7 +12,7 @@
 #include <vector>
 using namespace std;
 
-#define MAX_BONE_INFLUENCE 4
+#define MAX_BONE_INFLUENCE 5
 
 struct Vertex {
     // position

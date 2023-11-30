@@ -17,15 +17,11 @@ public:
 		m_CurrentTime = 0.0;
 		m_CurrentAnimation = animation;
 
-		m_FinalBoneMatrices.reserve(100);
+		// m_FinalBoneMatrices.reserve(100);
 
-		for (int i = 0; i < 100; i++)
-			m_FinalBoneMatrices.push_back(glm::mat4(1.0f));
+		// for (int i = 0; i < 100; i++)
+		// 	m_FinalBoneMatrices.push_back(glm::mat4(1.0f));
 	}
-
-	float GetTicksPerSecond() { return m_CurrentAnimation->GetTicksPerSecond(); }
-	float GetDuration() { return m_CurrentAnimation->GetDuration(); }
-	int GetBoneCount() { return m_CurrentAnimation->GetBoneIDMap().size(); }
 
 	void getBoneMatricesForAllFrames(std::vector<vector<glm::mat4>> &boneMatricesAllFrames)
 	{
@@ -68,6 +64,8 @@ public:
 		if (m_CurrentAnimation)
 		{
 			m_CurrentTime += m_CurrentAnimation->GetTicksPerSecond() * dt;
+			if (m_CurrentTime < 0.0f)
+				m_CurrentTime = 0.0f;
 			m_CurrentTime = fmod(m_CurrentTime, m_CurrentAnimation->GetDuration());
 			CalculateBoneTransform(&m_CurrentAnimation->GetRootNode(), glm::mat4(1.0f));
 		}
