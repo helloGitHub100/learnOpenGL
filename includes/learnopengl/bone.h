@@ -31,6 +31,14 @@ struct KeyScale
 class Bone
 {
 public:
+	// 默认构造函数
+	Bone()
+		:
+		m_Name(""),
+		m_ID(-1),
+		m_LocalTransform(1.0f)
+	{
+	}
 	Bone(const std::string& name, int ID, const aiNodeAnim* channel)
 		:
 		m_Name(name),

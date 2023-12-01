@@ -44,14 +44,9 @@ public:
 
 	Bone* FindBone(const std::string& name)
 	{
-		auto iter = std::find_if(m_Bones.begin(), m_Bones.end(),
-			[&](const Bone& Bone)
-			{
-				return Bone.GetBoneName() == name;
-			}
-		);
+		auto iter = m_Bones.find(name);
 		if (iter == m_Bones.end()) return nullptr;
-		else return &(*iter);
+		else return &iter->second;
 	}
 
 	
@@ -82,8 +77,8 @@ private:
 				boneInfoMap[boneName].id = boneCount;
 				boneCount++;
 			}
-			m_Bones.push_back(Bone(channel->mNodeName.data,
-				boneInfoMap[channel->mNodeName.data].id, channel));
+			m_Bones[channel->mNodeName.data] = Bone(channel->mNodeName.data,
+				boneInfoMap[boneName].id, channel);
 		}
 
 		m_BoneInfoMap = boneInfoMap;
@@ -106,7 +101,7 @@ private:
 	}
 	float m_Duration;
 	int m_TicksPerSecond;
-	std::vector<Bone> m_Bones;
+	std::map<std::string, Bone> m_Bones;
 	AssimpNodeData m_RootNode;
 	std::map<std::string, BoneInfo> m_BoneInfoMap;
 };
