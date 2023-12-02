@@ -5,7 +5,7 @@
       "glfw3",
       {
         "name": "glad",
-        "features": ["gl-api-43"]
+        "features": ["gl-api-46"]
       },
       "assimp",
       "imgui",

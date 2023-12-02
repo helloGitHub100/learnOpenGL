@@ -18,7 +18,8 @@
 #### 安装glfw3
 打开cmd，执行命令```vcpkg install glfw3:x64-windows```
 #### 安装glad
-打开cmd，vcpkg install glad[gl-api-43]:x64-windows
+打开cmd，vcpkg install glad[gl-api-46]:x64-windows
+如果是苹果电脑，只支持OpenGL4.1，所以需要安装glad[gl-api-41]，则DSA的示例代码无法运行。
 #### 安装assimp
 vcpkg install assimp:x64-windows
 #### 安装imGui
@@ -69,7 +70,7 @@ export CMAKE_TOOLCHAIN_FILE=vcpkg根目录/scripts/buildsystems/vcpkg.cmake
 #### 安装glfw3
 打开终端，执行命令```sudo vcpkg install glfw3:x64-linux```
 #### 安装glad
-打开终端，执行命令```sudo vcpkg install glad[gl-api-43]:x64-linux```
+打开终端，执行命令```sudo vcpkg install glad[gl-api-46]:x64-linux```
 #### 安装assimp
 打开终端，执行命令```sudo vcpkg install assimp:x64-linux```
 #### 安装imGui
