@@ -26,8 +26,8 @@ std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& projview);
 void drawCascadeVolumeVisualizers(const std::vector<glm::mat4>& lightMatrices, Shader* shader);
 
 // settings
-const unsigned int SCR_WIDTH = 2560;
-const unsigned int SCR_HEIGHT = 1440;
+const unsigned int SCR_WIDTH = 1600;
+const unsigned int SCR_HEIGHT = 1200;
 
 // framebuffer size
 int fb_width;
@@ -453,9 +453,9 @@ std::vector<GLuint> visualizerVBOs;
 std::vector<GLuint> visualizerEBOs;
 void drawCascadeVolumeVisualizers(const std::vector<glm::mat4>& lightMatrices, Shader* shader)
 {
-    visualizerVAOs.resize(8);
-    visualizerEBOs.resize(8);
-    visualizerVBOs.resize(8);
+    visualizerVAOs.resize(lightMatrices.size());
+    visualizerEBOs.resize(lightMatrices.size());
+    visualizerVBOs.resize(lightMatrices.size());
 
     const GLuint indices[] = {
         0, 2, 3,
@@ -476,10 +476,15 @@ void drawCascadeVolumeVisualizers(const std::vector<glm::mat4>& lightMatrices, S
         {1.0, 0.0, 0.0, 0.5f},
         {0.0, 1.0, 0.0, 0.5f},
         {0.0, 0.0, 1.0, 0.5f},
+        {1.0, 1.0, 0.0, 0.5f},
+        {0.0, 1.0, 1.0, 0.5f},
     };
 
     for (int i = 0; i < lightMatrices.size(); ++i)
     {
+        if (i != debugLayer)
+            continue;
+
         const auto corners = getFrustumCornersWorldSpace(lightMatrices[i]);
         std::vector<glm::vec3> vec3s;
         for (const auto& v : corners)
@@ -503,7 +508,7 @@ void drawCascadeVolumeVisualizers(const std::vector<glm::mat4>& lightMatrices, S
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
 
         glBindVertexArray(visualizerVAOs[i]);
-        shader->setVec4("color", colors[i % 3]);
+        shader->setVec4("color", colors[i % 5]);
         glDrawElements(GL_TRIANGLES, GLsizei(36), GL_UNSIGNED_INT, 0);
 
         glDeleteBuffers(1, &visualizerVBOs[i]);
@@ -560,6 +565,8 @@ void processInput(GLFWwindow *window)
         lightMatricesCache = getLightSpaceMatrices();
     }
     cPress = glfwGetKey(window, GLFW_KEY_C);
+    if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS)
+        lightMatricesCache.clear();
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -568,9 +575,11 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     // make sure the viewport matches the new window dimensions; note that width and 
     // height will be significantly larger than specified on retina displays.
-    fb_width = width;
-    fb_height = height;
-    glViewport(0, 0, width, height);
+    if (width > 0)
+        fb_width = width;
+    if (height > 0)
+        fb_height = height;
+    glViewport(0, 0, fb_width, fb_height);
 }
 
 // glfw: whenever the mouse moves, this callback is called
