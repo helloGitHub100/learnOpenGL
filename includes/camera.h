@@ -102,6 +102,13 @@ public:
         updateCameraVectors();
     }
 
+    // 绕Y轴旋转
+    void RotateY(float angle)
+    {
+        Yaw += angle;
+        updateCameraVectors();
+    }
+
     // processes input received from a mouse scroll-wheel event. Only requires input on the vertical wheel-axis
     void ProcessMouseScroll(float yoffset)
     {

@@ -14,7 +14,7 @@ uniform vec3 lightDir;
 uniform vec3 viewPos;
 uniform float farPlane;
 
-uniform mat4 view;
+uniform mat4 viewShadow;
 
 layout (std140) uniform LightSpaceMatrices
 {
@@ -26,7 +26,7 @@ uniform int cascadeCount;   // number of frusta - 1
 float ShadowCalculation(vec3 fragPosWorldSpace)
 {
     // select cascade layer
-    vec4 fragPosViewSpace = view * vec4(fragPosWorldSpace, 1.0);
+    vec4 fragPosViewSpace = viewShadow * vec4(fragPosWorldSpace, 1.0);
     float depthValue = abs(fragPosViewSpace.z);
 
     int layer = -1;
