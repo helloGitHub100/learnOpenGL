@@ -49,8 +49,6 @@ Camera camera1(glm::vec3(0.0f, 0.0f, -3.0f));
 float lastX1 = (float)SCR_WIDTH / 2.0;
 float lastY1 = (float)SCR_HEIGHT / 2.0;
 bool firstMouse1 = true;
-float cameraNearPlane1 = 0.1f;
-float cameraFarPlane1 = 500.0f;
 
 int g_currentCamera = 0;
 
@@ -288,7 +286,7 @@ int main()
         glViewport(fb_width + viewportSeperate, 0, fb_width, fb_height);
         //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         shader.use();
-        glm::mat4 projection1 = glm::perspective(glm::radians(camera1.Zoom), (float)fb_width / (float)fb_height, cameraNearPlane1, cameraFarPlane1);
+        glm::mat4 projection1 = glm::perspective(glm::radians(camera1.Zoom), (float)fb_width / (float)fb_height, cameraNearPlane, cameraFarPlane);
         glm::mat4 view1 = camera1.GetViewMatrix();
         shader.setMat4("projection", projection1);
         shader.setMat4("view", view1);
