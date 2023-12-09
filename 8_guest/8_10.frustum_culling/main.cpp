@@ -31,17 +31,28 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
+void drawVisualizerFrustums(Shader* shader);
 
 // settings
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
+const unsigned int SCR_WIDTH = 1000;
+const unsigned int SCR_HEIGHT = 1000;
+int viewportSeperate = 20;
 
 // camera
 Camera camera(glm::vec3(0.0f, 10.0f, 0.0f));
-Camera cameraSpy(glm::vec3(0.0f, 10.0f, 0.f));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
+float cameraNearPlane = 0.1f;
+float cameraFarPlane = 500.0f;
+
+// camera 1
+Camera camera1(glm::vec3(0.0f, 10.0f, 3.0f));
+float lastX1 = (float)SCR_WIDTH / 2.0;
+float lastY1 = (float)SCR_HEIGHT / 2.0;
+bool firstMouse1 = true;
+
+int g_currentCamera = 0;
 
 // timing
 float deltaTime = 0.0f;
@@ -62,7 +73,7 @@ int main()
 
 	// glfw window creation
 	// --------------------
-	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH * 2 + viewportSeperate, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
 	if (window == NULL)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
@@ -93,10 +104,12 @@ int main()
 	glEnable(GL_DEPTH_TEST);
 
 	camera.MovementSpeed = 20.f;
+	camera1.MovementSpeed = 20.f;
 
 	// build and compile shaders
 	// -------------------------
 	Shader ourShader(VERTEX_FILE, FRAGMENT_FILE);
+	Shader debugFrustumShader(VERTEX_DEBUG_FRUSTUM_FILE, FRAGMENT_DEBUG_FRUSTUM_FILE);
 
 	// load entities
 	// -----------
@@ -145,17 +158,16 @@ int main()
 		glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+		glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 		// don't forget to enable shader before setting uniforms
 		ourShader.use();
 
 		// view/projection transformations
-		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-		const Frustum camFrustum = createFrustumFromCamera(camera, (float)SCR_WIDTH / (float)SCR_HEIGHT, glm::radians(camera.Zoom), 0.1f, 100.0f);
+		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, cameraNearPlane, cameraFarPlane);
+		const Frustum camFrustum = createFrustumFromCamera(camera, (float)SCR_WIDTH / (float)SCR_HEIGHT, glm::radians(camera.Zoom), cameraNearPlane, cameraFarPlane);
 
-		cameraSpy.ProcessMouseMovement(2, 0);
 		//static float acc = 0;
 		//acc += deltaTime * 0.0001;
-		//cameraSpy.Position = { cos(acc) * 10, 0.f, sin(acc) * 10 };
 		glm::mat4 view = camera.GetViewMatrix();
 
 		ourShader.setMat4("projection", projection);
@@ -164,7 +176,26 @@ int main()
 		// draw our scene graph
 		unsigned int total = 0, display = 0;
 		ourEntity.drawSelfAndChild(camFrustum, ourShader, display, total);
-		std::cout << "Total process in CPU : " << total << " / Total send to GPU : " << display << std::endl;
+		//std::cout << "Total process in CPU : " << total << " / Total send to GPU : " << display << std::endl;
+
+		// camera1 viewport
+		glViewport(SCR_WIDTH + viewportSeperate, 0, SCR_WIDTH, SCR_HEIGHT);
+		projection = glm::perspective(glm::radians(camera1.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, cameraNearPlane, cameraFarPlane);
+		view = camera1.GetViewMatrix();
+		ourShader.setMat4("projection", projection);
+		ourShader.setMat4("view", view);
+		total = 0;
+		display = 0;
+		ourEntity.drawSelfAndChild(camFrustum, ourShader, display, total);
+
+		// debug frustum visualization
+		debugFrustumShader.use();
+		debugFrustumShader.setMat4("projection", projection);
+		debugFrustumShader.setMat4("view", view);
+		glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		drawVisualizerFrustums(&debugFrustumShader);
+		glDisable(GL_BLEND);
 
 		//ourEntity.transform.setLocalRotation({ 0.f, ourEntity.transform.getLocalRotation().y + 20 * deltaTime, 0.f });
 		ourEntity.updateSelfAndChild();
@@ -188,16 +219,54 @@ void processInput(GLFWwindow* window)
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
 
-	camera.MovementSpeed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ? 2.5 * 10 : 2.5;
-	
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		camera.ProcessKeyboard(FORWARD, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		camera.ProcessKeyboard(BACKWARD, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		camera.ProcessKeyboard(LEFT, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		camera.ProcessKeyboard(RIGHT, deltaTime);
+    {
+        if (g_currentCamera == 0)
+            camera.ProcessKeyboard(FORWARD, deltaTime);
+        else if (g_currentCamera == 1)
+            camera1.ProcessKeyboard(FORWARD, deltaTime);
+    }
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+    {
+        if (g_currentCamera == 0)
+            camera.ProcessKeyboard(BACKWARD, deltaTime);
+        else if (g_currentCamera == 1)
+            camera1.ProcessKeyboard(BACKWARD, deltaTime);
+    }
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+    {
+        if (g_currentCamera == 0)
+            camera.ProcessKeyboard(LEFT, deltaTime);
+        else if (g_currentCamera == 1)
+            camera1.ProcessKeyboard(LEFT, deltaTime);
+    }
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+    {
+        if (g_currentCamera == 0)
+            camera.ProcessKeyboard(RIGHT, deltaTime);
+        else if (g_currentCamera == 1)
+            camera1.ProcessKeyboard(RIGHT, deltaTime);
+    }
+
+	if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
+    {
+        if (g_currentCamera < 0)
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        g_currentCamera = 0;
+        firstMouse = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
+    {
+        if (g_currentCamera < 0)
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        g_currentCamera = 1;
+        firstMouse1 = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS)
+    {
+        g_currentCamera = -1;
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    }
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -213,25 +282,133 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 // -------------------------------------------------------
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
-	if (firstMouse)
-	{
-		lastX = xpos;
-		lastY = ypos;
-		firstMouse = false;
-	}
+	if (g_currentCamera == 0)
+    {
+        if (firstMouse)
+        {
+            lastX = xpos;
+            lastY = ypos;
+            firstMouse = false;
+        }
 
-	float xoffset = xpos - lastX;
-	float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
+        float xoffset = xpos - lastX;
+        float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
 
-	lastX = xpos;
-	lastY = ypos;
+        lastX = xpos;
+        lastY = ypos;
 
-	camera.ProcessMouseMovement(xoffset, yoffset);
+        camera.ProcessMouseMovement(xoffset, yoffset);
+    }
+    else if (g_currentCamera == 1)
+    {
+        if (firstMouse1)
+        {
+            lastX1 = xpos;
+            lastY1 = ypos;
+            firstMouse1 = false;
+        }
+
+        float xoffset = xpos - lastX1;
+        float yoffset = lastY1 - ypos; // reversed since y-coordinates go from bottom to top
+
+        lastX1 = xpos;
+        lastY1 = ypos;
+
+        camera1.ProcessMouseMovement(xoffset, yoffset);
+    }
 }
 
 // glfw: whenever the mouse scroll wheel scrolls, this callback is called
 // ----------------------------------------------------------------------
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-	camera.ProcessMouseScroll(yoffset);
+	if (g_currentCamera == 0)
+        camera.ProcessMouseScroll(yoffset);
+    else if (g_currentCamera == 1)
+        camera1.ProcessMouseScroll(yoffset);
+}
+
+std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& projview)
+{
+    const auto inv = glm::inverse(projview);
+
+    std::vector<glm::vec4> frustumCorners;
+    for (unsigned int x = 0; x < 2; ++x)
+    {
+        for (unsigned int y = 0; y < 2; ++y)
+        {
+            for (unsigned int z = 0; z < 2; ++z)
+            {
+                const glm::vec4 pt = inv * glm::vec4(2.0f * x - 1.0f, 2.0f * y - 1.0f, 2.0f * z - 1.0f, 1.0f);
+                frustumCorners.push_back(pt / pt.w);
+            }
+        }
+    }
+
+    return frustumCorners;
+}
+
+
+std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& proj, const glm::mat4& view)
+{
+    return getFrustumCornersWorldSpace(proj * view);
+}
+
+// draw Cascade Frustums Visualizers
+GLuint visualizerFrustumVAO;
+GLuint visualizerFrustumVBO;
+GLuint visualizerFrustumEBO;
+
+void drawVisualizerFrustums(Shader* shader)
+{
+    const GLuint indices[] = {
+        0, 2, 3,
+        0, 3, 1,
+        4, 6, 2,
+        4, 2, 0,
+        5, 7, 6,
+        5, 6, 4,
+        1, 3, 7,
+        1, 7, 5,
+        6, 7, 3,
+        6, 3, 2,
+        1, 5, 4,
+        0, 1, 4
+    };
+
+    const glm::vec4 color = {1.0, 1.0, 1.0, 0.5f};
+	const auto proj = glm::perspective(
+		glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, cameraNearPlane,
+		cameraFarPlane);
+	const auto corners = getFrustumCornersWorldSpace(proj, camera.GetViewMatrix());
+	std::vector<glm::vec3> vec3s;
+	for (const auto &v : corners)
+	{
+		vec3s.push_back(glm::vec3(v));
+	}
+
+	glGenVertexArrays(1, &visualizerFrustumVAO);
+	glGenBuffers(1, &visualizerFrustumVBO);
+	glGenBuffers(1, &visualizerFrustumEBO);
+
+	glBindVertexArray(visualizerFrustumVAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, visualizerFrustumVBO);
+	glBufferData(GL_ARRAY_BUFFER, vec3s.size() * sizeof(glm::vec3), &vec3s[0], GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, visualizerFrustumEBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 36 * sizeof(GLuint), &indices[0], GL_STATIC_DRAW);
+
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)0);
+
+	glBindVertexArray(visualizerFrustumVAO);
+	shader->setVec4("color", color);
+	glDrawElements(GL_TRIANGLES, GLsizei(36), GL_UNSIGNED_INT, 0);
+
+	glDeleteBuffers(1, &visualizerFrustumVBO);
+	glDeleteBuffers(1, &visualizerFrustumEBO);
+	glDeleteVertexArrays(1, &visualizerFrustumVAO);
+
+	glBindVertexArray(0);
 }

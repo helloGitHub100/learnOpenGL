@@ -753,7 +753,7 @@ void processInput(GLFWwindow *window)
         g_currentCamera = 1;
         firstMouse1 = true;
     }
-    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS)
     {
         g_currentCamera = -1;
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
