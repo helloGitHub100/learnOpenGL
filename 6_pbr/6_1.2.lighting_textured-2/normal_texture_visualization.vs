@@ -27,7 +27,9 @@ void main()
     vec3 B = normalize(normalMatrix * aBitangent);
     vec3 N = normalize(normalMatrix * aNormal);
     mat3 TBN = mat3(T, B, N);
-    vs_out.normal = bTBN ? TBN * normalize(texture(normalMap, aTexCoords).xyz) : normalMatrix * normalize(texture(normalMap, aTexCoords).xyz);
+    vec3 rgb_normal = texture(normalMap, aTexCoords).xyz;
+    vec3 normal = normalize(rgb_normal * 2.0 - 1.0);
+    vs_out.normal = bTBN ? TBN * normal : normalMatrix * normal;
     //vs_out.normal = normalize(TBN * vec3(0.0, 0.0, 1.0));//检测TBN
     //vs_out.normal = normalize(TBN * vec3(1.0, 0.0, 0.0));//检测TBN
     gl_Position = view * model * vec4(aPosOffset, 1.0); 

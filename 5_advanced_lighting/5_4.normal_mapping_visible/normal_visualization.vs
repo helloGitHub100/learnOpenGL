@@ -25,11 +25,12 @@ void main()
     vec3 B = cross(N, T);
     
     mat3 TBN = mat3(T, B, N);
-    vec3 normal = texture(normalMap, aTexCoords).xyz;
+    vec3 rgb_normal = texture(normalMap, aTexCoords).xyz;
+    vec3 normal = normalize(rgb_normal * 2.0 - 1.0);
     if(enableTBN)
-        vs_out.normal = abs(dot(vec3(0.0, 0.0, 1.0), normal)) < dotMax ? normalize(TBN * texture(normalMap, aTexCoords).xyz) : vec3(0.0);
+        vs_out.normal = abs(dot(vec3(0.0, 0.0, 1.0), normal)) < dotMax ? normalize(TBN * normal) : vec3(0.0);
     else
-        vs_out.normal = normalize(normalMatrix * texture(normalMap, aTexCoords).xyz);
+        vs_out.normal = normalize(normalMatrix * normal);
     //vs_out.normal = normalize(TBN * vec3(0.0, 0.0, 1.0));//检测TBN
     //vs_out.normal = normalize(TBN * vec3(1.0, 0.0, 0.0));//检测TBN
     gl_Position = view * model * vec4(aPos, 1.0); 
