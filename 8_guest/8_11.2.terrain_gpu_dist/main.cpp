@@ -23,6 +23,8 @@ void processInput(GLFWwindow *window);
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 const unsigned int NUM_PATCH_PTS = 4;
+int useWireframe = 0;
+bool g_bCaptureCursor = true;
 
 // camera - give pretty starting point
 Camera camera(glm::vec3(67.0f, 627.5f, 169.9f),
@@ -175,6 +177,11 @@ int main()
 
     camera.MovementSpeed = 100.0f;
 
+    // fps param
+    int nbFrames = 0;
+    char title[256];
+    float deltaTimeFPS = 0.0f;
+
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
@@ -184,6 +191,17 @@ int main()
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
+
+        // calc FPS
+		deltaTimeFPS += deltaTime;
+        if (deltaTimeFPS >= 1.0 && nbFrames > 0)
+        {
+            sprintf_s(title, 256, "LearnOpenGL @ %.3f ms/frame (%.1f FPS)", deltaTimeFPS * 1000 / float(nbFrames), float(nbFrames) / deltaTimeFPS);
+            glfwSetWindowTitle(window, title);
+            nbFrames = 0;
+            deltaTimeFPS = 0.0f;
+        }
+        nbFrames++;
 
         // input
         // -----
@@ -202,6 +220,7 @@ int main()
         glm::mat4 view = camera.GetViewMatrix();
         tessHeightMapShader.setMat4("projection", projection);
         tessHeightMapShader.setMat4("view", view);
+        tessHeightMapShader.setVec3("cameraPos", camera.Position);
 
         // world transformation
         glm::mat4 model = glm::mat4(1.0f);
@@ -262,6 +281,28 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     {
         switch(key)
         {
+            case GLFW_KEY_SPACE:
+                useWireframe = 1 - useWireframe;
+                if (useWireframe == 1)
+                {
+                    // uncomment this call to draw in wireframe polygons.
+                    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+                }
+                else
+                {
+                    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+                }
+                break;
+            case GLFW_KEY_LEFT_ALT:
+                g_bCaptureCursor = !g_bCaptureCursor;
+                if (g_bCaptureCursor)
+                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                else
+                {
+                    firstMouse = true;
+                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                }
+                break;
             default:
                 break;
         }
@@ -272,6 +313,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 // -------------------------------------------------------
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
+    if (!g_bCaptureCursor)
+        return;
     if (firstMouse)
     {
         lastX = xpos;

@@ -4,6 +4,7 @@ layout(vertices=4) out;
 
 uniform mat4 model;
 uniform mat4 view;
+uniform vec3 cameraPos;
 
 in vec2 TexCoord[];
 out vec2 TextureCoord[];
@@ -18,18 +19,29 @@ void main()
         const int MIN_TESS_LEVEL = 4;
         const int MAX_TESS_LEVEL = 64;
         const float MIN_DISTANCE = 20;
-        const float MAX_DISTANCE = 800;
+        const float MAX_DISTANCE = 1000;
 
-        vec4 eyeSpacePos00 = view * model * gl_in[0].gl_Position;
-        vec4 eyeSpacePos01 = view * model * gl_in[1].gl_Position;
-        vec4 eyeSpacePos10 = view * model * gl_in[2].gl_Position;
-        vec4 eyeSpacePos11 = view * model * gl_in[3].gl_Position;
+        //vec4 eyeSpacePos00 = view * model * gl_in[0].gl_Position;
+        //vec4 eyeSpacePos01 = view * model * gl_in[1].gl_Position;
+        //vec4 eyeSpacePos10 = view * model * gl_in[2].gl_Position;
+        //vec4 eyeSpacePos11 = view * model * gl_in[3].gl_Position;
+        
+        // positions of the corners of the screen
+        vec4 modelPos00 = model * gl_in[0].gl_Position;
+        vec4 modelPos01 = model * gl_in[1].gl_Position;
+        vec4 modelPos10 = model * gl_in[2].gl_Position;
+        vec4 modelPos11 = model * gl_in[3].gl_Position;
+        // calculate the distance from the camera to the corners of the screen at the model space
+        float dist00 = length(cameraPos - modelPos00.xyz);
+        float dist01 = length(cameraPos - modelPos01.xyz);
+        float dist10 = length(cameraPos - modelPos10.xyz);
+        float dist11 = length(cameraPos - modelPos11.xyz);
 
         // "distance" from camera scaled between 0 and 1
-        float distance00 = clamp( (abs(eyeSpacePos00.z) - MIN_DISTANCE) / (MAX_DISTANCE-MIN_DISTANCE), 0.0, 1.0 );
-        float distance01 = clamp( (abs(eyeSpacePos01.z) - MIN_DISTANCE) / (MAX_DISTANCE-MIN_DISTANCE), 0.0, 1.0 );
-        float distance10 = clamp( (abs(eyeSpacePos10.z) - MIN_DISTANCE) / (MAX_DISTANCE-MIN_DISTANCE), 0.0, 1.0 );
-        float distance11 = clamp( (abs(eyeSpacePos11.z) - MIN_DISTANCE) / (MAX_DISTANCE-MIN_DISTANCE), 0.0, 1.0 );
+        float distance00 = clamp( (dist00 - MIN_DISTANCE) / (MAX_DISTANCE-MIN_DISTANCE), 0.0, 1.0 );
+        float distance01 = clamp( (dist01 - MIN_DISTANCE) / (MAX_DISTANCE-MIN_DISTANCE), 0.0, 1.0 );
+        float distance10 = clamp( (dist10 - MIN_DISTANCE) / (MAX_DISTANCE-MIN_DISTANCE), 0.0, 1.0 );
+        float distance11 = clamp( (dist11 - MIN_DISTANCE) / (MAX_DISTANCE-MIN_DISTANCE), 0.0, 1.0 );
 
         float tessLevel0 = mix( MAX_TESS_LEVEL, MIN_TESS_LEVEL, min(distance10, distance00) );
         float tessLevel1 = mix( MAX_TESS_LEVEL, MIN_TESS_LEVEL, min(distance00, distance01) );
