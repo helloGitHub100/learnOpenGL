@@ -212,9 +212,11 @@ int main()
     ImGui_ImplOpenGL3_Init("#version 330");
 
     // imGui param
-    float fovScale = 0.75f;
+    float fovScale = 0.8f;
     int outOfFrustumTessLevel = 0;
     bool disableFrustumCulling = false;
+    float power = 2.0f;
+    float MAX_DISTANCE = 2400.0;
 
     // fps param
     int nbFrames = 0;
@@ -276,6 +278,8 @@ int main()
         tessHeightMapShader.setFloat("fovCos", fovCos);
         tessHeightMapShader.setInt("outOfFrustumTessLevel", outOfFrustumTessLevel);
         tessHeightMapShader.setBool("disableFrustumCulling", disableFrustumCulling);
+        tessHeightMapShader.setFloat("power", power);
+        tessHeightMapShader.setFloat("MAX_DISTANCE", MAX_DISTANCE);
 
         // world transformation
         glm::mat4 model = glm::mat4(1.0f);
@@ -316,6 +320,8 @@ int main()
         ImGui::SliderFloat("Fov Scale", &fovScale, 0.5f, 2.0f);
         ImGui::SliderInt("Tess Level out of frustum" , &outOfFrustumTessLevel, 0, 4);
         ImGui::Checkbox("Disable frustum culling", &disableFrustumCulling);
+        ImGui::SliderFloat("power", &power, 0.1f, 5.0f, "%.1f");
+        ImGui::SliderFloat("MAX_DISTANCE", &MAX_DISTANCE, 100.0f, 10000.0f, "%.1f");
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 
         ImGui::End();

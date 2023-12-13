@@ -7,6 +7,8 @@ uniform mat4 mainView;
 uniform float fovCos;
 uniform int outOfFrustumTessLevel = 0;
 uniform bool disableFrustumCulling = false;
+uniform float power = 2.0;
+uniform float MAX_DISTANCE = 2400.0;
 
 in vec2 TexCoord[];
 out vec2 TextureCoord[];
@@ -21,7 +23,6 @@ void main()
         const int MIN_TESS_LEVEL = 4;
         const int MAX_TESS_LEVEL = 64;
         const float MIN_DISTANCE = 20;
-        const float MAX_DISTANCE = 1000;
 
         vec4 eyeSpacePos00 = mainView * model * gl_in[0].gl_Position;
         vec4 eyeSpacePos01 = mainView * model * gl_in[1].gl_Position;
@@ -57,10 +58,10 @@ void main()
             float distance10 = clamp( (dist10 - MIN_DISTANCE) / (MAX_DISTANCE-MIN_DISTANCE), 0.0, 1.0 );
             float distance11 = clamp( (dist11 - MIN_DISTANCE) / (MAX_DISTANCE-MIN_DISTANCE), 0.0, 1.0 );
 
-            tessLevel0 = mix( MAX_TESS_LEVEL, MIN_TESS_LEVEL, pow(min(distance10, distance00), 3.0) );
-            tessLevel1 = mix( MAX_TESS_LEVEL, MIN_TESS_LEVEL, pow(min(distance00, distance01), 3.0) );
-            tessLevel2 = mix( MAX_TESS_LEVEL, MIN_TESS_LEVEL, pow(min(distance01, distance11), 3.0) );
-            tessLevel3 = mix( MAX_TESS_LEVEL, MIN_TESS_LEVEL, pow(min(distance11, distance10), 3.0) );
+            tessLevel0 = mix( MAX_TESS_LEVEL, MIN_TESS_LEVEL, pow(min(distance10, distance00), power) );
+            tessLevel1 = mix( MAX_TESS_LEVEL, MIN_TESS_LEVEL, pow(min(distance00, distance01), power) );
+            tessLevel2 = mix( MAX_TESS_LEVEL, MIN_TESS_LEVEL, pow(min(distance01, distance11), power) );
+            tessLevel3 = mix( MAX_TESS_LEVEL, MIN_TESS_LEVEL, pow(min(distance11, distance10), power) );
         }
 
         gl_TessLevelOuter[0] = tessLevel0;
