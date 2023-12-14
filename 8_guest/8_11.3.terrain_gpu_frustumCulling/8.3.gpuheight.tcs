@@ -46,7 +46,6 @@ void main()
             cosAngle11 >= fovCos ||
             disableFrustumCulling)
         {
-            // calculate the distance from the camera to the corners of the screen at the model space
             float dist00 = length(eyeSpacePos00.xyz);
             float dist01 = length(eyeSpacePos01.xyz);
             float dist10 = length(eyeSpacePos10.xyz);

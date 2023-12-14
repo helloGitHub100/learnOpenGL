@@ -28,9 +28,7 @@ void drawVisualizerFrustums(Shader* shader);
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 int viewportSeperate = 20;
-int ImGui_Width = 600;
 const unsigned int NUM_PATCH_PTS = 4;
-int useWireframe = 0;
 
 // camera - give pretty starting point
 Camera camera(glm::vec3(67.0f, 627.5f, 169.9f),
@@ -57,7 +55,8 @@ float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
 // imGui Params
-
+int ImGui_Width = 600;
+bool g_bUseWireframe = false;
 
 int main()
 {
@@ -248,7 +247,7 @@ int main()
         // -----
         processInput(window);
 
-        if (useWireframe == 1)
+        if (g_bUseWireframe)
         {
             // uncomment this call to draw in wireframe polygons.
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -320,6 +319,7 @@ int main()
         ImGui::SliderFloat("Fov Scale", &fovScale, 0.5f, 2.0f);
         ImGui::SliderInt("Tess Level out of frustum" , &outOfFrustumTessLevel, 0, 4);
         ImGui::Checkbox("Disable frustum culling", &disableFrustumCulling);
+        ImGui::Checkbox("Wireframe", &g_bUseWireframe);
         ImGui::SliderFloat("power", &power, 0.1f, 5.0f, "%.1f");
         ImGui::SliderFloat("MAX_DISTANCE", &MAX_DISTANCE, 100.0f, 10000.0f, "%.1f");
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
@@ -424,7 +424,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         switch(key)
         {
             case GLFW_KEY_SPACE:
-                useWireframe = 1 - useWireframe;
+                g_bUseWireframe = !g_bUseWireframe;
                 break;
             case GLFW_KEY_LEFT_ALT:
                 g_currentCamera = -1;
