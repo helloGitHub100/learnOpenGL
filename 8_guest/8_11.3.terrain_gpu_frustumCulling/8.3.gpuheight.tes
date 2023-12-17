@@ -2,13 +2,17 @@
 layout(quads, fractional_odd_spacing, ccw) in;
 
 uniform sampler2D heightMap;
+uniform sampler2D colorMap;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
+uniform bool bUseColorMap = false;
+uniform float heightScale = 1.0;
 
 in vec2 TextureCoord[];
+out vec2 texCoord;
 
-out float Height;
+out vec3 color;
 
 void main()
 {
@@ -22,9 +26,11 @@ void main()
 
     vec2 t0 = (t01 - t00) * u + t00;
     vec2 t1 = (t11 - t10) * u + t10;
-    vec2 texCoord = (t1 - t0) * v + t0;
+    texCoord = (t1 - t0) * v + t0;
 
-    Height = texture(heightMap, texCoord).x * 64.0 - 16.0;
+    float heightTemp = texture(heightMap, texCoord).x;
+    color = bUseColorMap ? texture(colorMap, texCoord).rgb : vec3(heightTemp, heightTemp, heightTemp);
+    float Height = (heightTemp * 64.0 - 16.0) * heightScale;
 
     vec4 p00 = gl_in[0].gl_Position;
     vec4 p01 = gl_in[1].gl_Position;

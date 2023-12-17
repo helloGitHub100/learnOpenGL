@@ -121,23 +121,46 @@ int main()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     // set texture filtering parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     // load image, create texture and generate mipmaps
     int width, height, nrChannels;
     // The FileSystem::getPath(...) is part of the GitHub repository so we can find files on any IDE/platform; replace it with your own image path.
-    unsigned char *data = stbi_load(RESOURCES_DIR"/../8_guest/8_11.2.terrain_gpu_dist/heightmaps/iceland_heightmap.png", &width, &height, &nrChannels, 0);
+    unsigned char *data = stbi_load(RESOURCES_DIR"/../8_guest/8_11.3.terrain_gpu_frustumCulling/heightmaps/heightmap.png", &width, &height, &nrChannels, 0);
     if (data)
     {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-
+        //glGenerateMipmap(GL_TEXTURE_2D);
+        tessHeightMapShader.use();
         tessHeightMapShader.setInt("heightMap", 0);
         std::cout << "Loaded heightmap of size " << height << " x " << width << std::endl;
     }
     else
     {
         std::cout << "Failed to load texture" << std::endl;
+    }
+    stbi_image_free(data);
+
+    // color texture
+    unsigned int colorTexture;
+    glGenTextures(1, &colorTexture);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, colorTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    data = stbi_load(RESOURCES_DIR"/../8_guest/8_11.3.terrain_gpu_frustumCulling/heightmaps/color.png", &width, &height, &nrChannels, 0);
+    if (data)
+    {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        tessHeightMapShader.use();
+        tessHeightMapShader.setInt("colorMap", 1);
+        std::cout << "Loaded color texture of size " << height << " x " << width << std::endl;
+    }
+    else
+    {
+        std::cout << "Failed to load color texture" << std::endl;
     }
     stbi_image_free(data);
 
@@ -216,6 +239,8 @@ int main()
     bool disableFrustumCulling = false;
     float power = 2.0f;
     float MAX_DISTANCE = 2400.0;
+    bool bUseColorMap = false;
+    float heightScale = 1.0f;
 
     // fps param
     int nbFrames = 0;
@@ -279,6 +304,8 @@ int main()
         tessHeightMapShader.setBool("disableFrustumCulling", disableFrustumCulling);
         tessHeightMapShader.setFloat("power", power);
         tessHeightMapShader.setFloat("MAX_DISTANCE", MAX_DISTANCE);
+        tessHeightMapShader.setBool("bUseColorMap", bUseColorMap);
+        tessHeightMapShader.setFloat("heightScale", heightScale);
 
         // world transformation
         glm::mat4 model = glm::mat4(1.0f);
@@ -320,8 +347,10 @@ int main()
         ImGui::SliderInt("Tess Level out of frustum" , &outOfFrustumTessLevel, 0, 4);
         ImGui::Checkbox("Disable frustum culling", &disableFrustumCulling);
         ImGui::Checkbox("Wireframe", &g_bUseWireframe);
+        ImGui::Checkbox("Use Color Map", &bUseColorMap);
         ImGui::SliderFloat("power", &power, 0.1f, 5.0f, "%.1f");
         ImGui::SliderFloat("MAX_DISTANCE", &MAX_DISTANCE, 100.0f, 10000.0f, "%.1f");
+        ImGui::SliderFloat("Height Scale", &heightScale, 0.1f, 10.0f, "%.1f");
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 
         ImGui::End();
