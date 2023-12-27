@@ -2,84 +2,53 @@
 
 ## 教程参照LearnOpenGL CN
 
-## windows想要运行该实例代码，需要如下准备工作
+### 1.克隆项目及其子模块
 
-### 1.下载、安装vcpkg
-
-#### 1.1 下载源码：git https://github.com/microsoft/vcpkg.git
-#### 1.2 运行脚本：bootstrap-vcpkg.bat
-之后会在脚本目录下生成一个可执行文件vcpkg.exe
-#### 1.3 添加环境
-将vcpkg.exe所在的路径添加到环境变量Path中；
-新建环境变量```CMAKE_TOOLCHAIN_FILE```，变量值一般为```vcpkg根目录/scripts/buildsystems/vcpkg.cmake```；
-
-### 2.安装依赖库
-
-#### 安装glfw3
-打开cmd，执行命令```vcpkg install glfw3:x64-windows```
-#### 安装glad
-打开cmd，vcpkg install glad[gl-api-46]:x64-windows
-如果是苹果电脑，只支持OpenGL4.1，所以需要安装glad[gl-api-41]，则DSA的示例代码无法运行。
-#### 安装assimp
-vcpkg install assimp:x64-windows
-#### 安装imGui
-vcpkg install imgui:x64-windows
-vcpkg install imgui[glfw-binding]:x64-windows --recurse
-vcpkg install imgui[opengl3-binding]:x64-windows --recurse
-#### 安装FreeType
-vcpkg install freetype:x64-windows
-#### 安装box2d
-vcpkg install box2d:x64-windows
-#### 安装portaudio
-portaudio:x64-windows
-#### 安装libsndfile
-vcpkg install libsndfile:x64-windows
-
-#### 安装vs编译工具包（编译器、生成器、cmake）
-
-- 最简单的办法是直接安装VS,我这里使用的vs2019；
-- 如果不想要复杂的IDE，也可以安装vsbuildTools；
-
-#### 注意：因为安装的依赖库是64位，所以选择的编译器也应该是64位，不能是64_x86，否则cmake配置会报错。
-
-### vscode扩展
-![](vscode扩展.png)
-![vscode扩展2](image.png)
-
-## Ubuntu系统准备工作
-
-### 1.下载、安装vcpkg
-
-打开终端，执行如下命令
-```shell
-git clone https://github.com/Microsoft/vcpkg.git
-cd vcpkg
-./bootstrap-vcpkg.sh
-./bootstrap-vcpkg.sh
-sudo ln -s vcpkg文件的绝对路径 /usr/local/bin
-vim ~/.bashrc
-在文件的末尾添加以下行
-export CMAKE_TOOLCHAIN_FILE=vcpkg根目录/scripts/buildsystems/vcpkg.cmake
-保存并关闭文件
-使配置文件生效：source ~/.bashrc
-在终端测试：echo $CMAKE_TOOLCHAIN_FILE
+```bat
+git clone --recursive https://github.com/WhizZest/learnOpenGL.git
 ```
 
-### 2.安装依赖库
+### 2.生成vcpkg可执行文件
 
-#### 安装glfw3
-打开终端，执行命令```sudo vcpkg install glfw3:x64-linux```
-#### 安装glad
-打开终端，执行命令```sudo vcpkg install glad[gl-api-46]:x64-linux```
-#### 安装assimp
-打开终端，执行命令```sudo vcpkg install assimp:x64-linux```
-#### 安装imGui
-打开终端，执行命令```sudo vcpkg install imgui:x64-linux```
-```shell
-sudo vcpkg install imgui[glfw-binding]:x64-linux --recurse
-sudo vcpkg install imgui[opengl3-binding]:x64-linux --recurse
+- windows下执行命令：
+```bat
+./vcpkg/bootstrap-vcpkg.bat
 ```
-#### 安装FreeType
-打开终端，执行命令```sudo vcpkg install freetype:x64-linux```
-#### 安装box2d
-打开终端，执行命令```sudo vcpkg install box2d:x64-linux```
+
+- linux/mac下执行命令：
+```bash
+./vcpkg/bootstrap-vcpkg.sh
+```
+
+- 
+
+### 3.安装依赖库
+
+#### 依赖库列表
+所有的依赖库全都是vcpkg支持的跨平台开源库，可以直接使用vcpkg安装。
+
+- windows下执行命令：
+```bat
+./vcpkg/vcpkg.exe install glfw3 glad[gl-api-46] assimp imgui[glfw-binding] imgui[opengl3-binding] freetype box2d portaudio libsndfile
+```
+
+- linux/mac下执行命令：
+```bash
+./vcpkg/vcpkg install glfw3 glad[gl-api-46] assimp imgui[glfw-binding] imgui[opengl3-binding] freetype box2d portaudio libsndfile
+```
+
+### 4.cmake构建
+
+#### 4.1 构建Debug版本
+```bat
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Debug
+cmake --build . --config Debug  --target ALL_BUILD -j 16
+```
+
+#### 4.2 构建Release版本
+```bat
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake --build . --config Release --target ALL_BUILD -j 16
+```
