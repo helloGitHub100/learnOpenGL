@@ -173,31 +173,26 @@ int main()
     {
         for(unsigned j = 0; j <= rez-1; j++)
         {
-            vertices.push_back(-width/2.0f + width*i/(float)rez); // v.x
-            vertices.push_back(0.0f); // v.y
-            vertices.push_back(-height/2.0f + height*j/(float)rez); // v.z
-            vertices.push_back(i / (float)rez); // u
-            vertices.push_back(j / (float)rez); // v
+            vertices.push_back(2.6f * i / rez - 1.3f); // v.x
+            vertices.push_back(2.6f * j / rez - 1.3f); // v.y
+            vertices.push_back(0.0f); // v.z
 
-            vertices.push_back(-width/2.0f + width*(i+1)/(float)rez); // v.x
-            vertices.push_back(0.0f); // v.y
-            vertices.push_back(-height/2.0f + height*j/(float)rez); // v.z
-            vertices.push_back((i+1) / (float)rez); // u
-            vertices.push_back(j / (float)rez); // v
+            vertices.push_back(2.6f * (i+1) / rez - 1.3f); // v.x
+            vertices.push_back(2.6f * j / rez - 1.3f); // v.y
+            vertices.push_back(0.0f); // v.z
 
-            vertices.push_back(-width/2.0f + width*i/(float)rez); // v.x
-            vertices.push_back(0.0f); // v.y
-            vertices.push_back(-height/2.0f + height*(j+1)/(float)rez); // v.z
-            vertices.push_back(i / (float)rez); // u
-            vertices.push_back((j+1) / (float)rez); // v
+            vertices.push_back(2.6f * i / rez - 1.3f); // v.x
+            vertices.push_back(2.6f * (j+1) / rez - 1.3f); // v.y
+            vertices.push_back(0.0f); // v.z
 
-            vertices.push_back(-width/2.0f + width*(i+1)/(float)rez); // v.x
-            vertices.push_back(0.0f); // v.y
-            vertices.push_back(-height/2.0f + height*(j+1)/(float)rez); // v.z
-            vertices.push_back((i+1) / (float)rez); // u
-            vertices.push_back((j+1) / (float)rez); // v
+            vertices.push_back(2.6f * (i+1) / rez - 1.3f); // v.x
+            vertices.push_back(2.6f * (j+1) / rez - 1.3f); // v.y
+            vertices.push_back(0.0f); // v.z
         }
     }
+    tessHeightMapShader.use();
+    tessHeightMapShader.setVec2("xMinMax", glm::vec2(-width/2.0f, width/2.0f));
+    tessHeightMapShader.setVec2("zMinMax", glm::vec2(-height/2.0f, height/2.0f));
     std::cout << "Loaded " << rez*rez << " patches of 4 control points each" << std::endl;
     std::cout << "Processing " << rez*rez*4 << " vertices in vertex shader" << std::endl;
 
@@ -211,11 +206,11 @@ int main()
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
 
     // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
     // texCoord attribute
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(sizeof(float) * 3));
-    glEnableVertexAttribArray(1);
+    //glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(sizeof(float) * 3));
+    //glEnableVertexAttribArray(1);
 
     glPatchParameteri(GL_PATCH_VERTICES, NUM_PATCH_PTS);
 
@@ -234,9 +229,7 @@ int main()
     ImGui_ImplOpenGL3_Init("#version 330");
 
     // imGui param
-    float fovScale = 0.8f;
     int outOfFrustumTessLevel = 0;
-    bool disableFrustumCulling = false;
     float power = 2.0f;
     float MAX_DISTANCE = 2400.0;
     bool bUseColorMap = false;
@@ -293,23 +286,23 @@ int main()
 
         // view/projection transformations
         float fov = glm::radians(camera.Zoom);
-        float fovCos = glm::cos(fov * fovScale);
         glm::mat4 projection = glm::perspective(fov, (float)SCR_WIDTH / (float)SCR_HEIGHT, cameraNearPlane, cameraFarPlane);
         glm::mat4 view = camera.GetViewMatrix();
         tessHeightMapShader.setMat4("projection", projection);
+        tessHeightMapShader.setMat4("inverseProjection", glm::inverse(projection));
         tessHeightMapShader.setMat4("view", view);
         tessHeightMapShader.setMat4("mainView", view);
-        tessHeightMapShader.setFloat("fovCos", fovCos);
+        tessHeightMapShader.setMat4("inverseMainView", glm::inverse(view));
+        tessHeightMapShader.setVec3("cameraPos", camera.Position);
         tessHeightMapShader.setInt("outOfFrustumTessLevel", outOfFrustumTessLevel);
-        tessHeightMapShader.setBool("disableFrustumCulling", disableFrustumCulling);
         tessHeightMapShader.setFloat("power", power);
         tessHeightMapShader.setFloat("MAX_DISTANCE", MAX_DISTANCE);
         tessHeightMapShader.setBool("bUseColorMap", bUseColorMap);
         tessHeightMapShader.setFloat("heightScale", heightScale);
 
         // world transformation
-        glm::mat4 model = glm::mat4(1.0f);
-        tessHeightMapShader.setMat4("model", model);
+        // glm::mat4 model = glm::mat4(1.0f);
+        // tessHeightMapShader.setMat4("model", model);
 
         // render the terrain
         glBindVertexArray(terrainVAO);
@@ -343,9 +336,7 @@ int main()
         ImGui::Begin("Param Setting", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
 
         ImGui::SliderFloat("camera Far Plane", &cameraFarPlane, 500.0f, 10000.0f);
-        ImGui::SliderFloat("Fov Scale", &fovScale, 0.5f, 2.0f);
         ImGui::SliderInt("Tess Level out of frustum" , &outOfFrustumTessLevel, 0, 4);
-        ImGui::Checkbox("Disable frustum culling", &disableFrustumCulling);
         ImGui::Checkbox("Wireframe", &g_bUseWireframe);
         ImGui::Checkbox("Use Color Map", &bUseColorMap);
         ImGui::SliderFloat("power", &power, 0.1f, 5.0f, "%.1f");
